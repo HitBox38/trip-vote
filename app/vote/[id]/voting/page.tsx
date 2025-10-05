@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { VotingInterface } from "@/components/voting-interface";
 
 export default async function VotingPage({
@@ -13,6 +14,14 @@ export default async function VotingPage({
 
   if (!participant) {
     redirect(`/vote/${id}`);
+  }
+
+  // Check if user has already voted on this session
+  const cookieStore = await cookies();
+  const voteCookie = cookieStore.get(`voted_${id}`);
+
+  if (voteCookie) {
+    redirect(`/vote/${id}/waiting?participant=${participant}`);
   }
 
   return (

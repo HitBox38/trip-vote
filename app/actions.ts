@@ -2,6 +2,7 @@
 
 import { nanoid } from "nanoid";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { z } from "zod";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
@@ -130,11 +131,31 @@ export async function submitVotes(prevState: unknown, formData: FormData) {
 
   const { sessionId, participantId, countries } = result.data;
 
+  // Check if user has already voted on this session
+  const cookieStore = await cookies();
+  const voteCookie = cookieStore.get(`voted_${sessionId}`);
+
+  if (voteCookie) {
+    return {
+      success: false,
+      errors: { countries: ["You have already submitted your vote for this session"] },
+    };
+  }
+
   try {
     await convex.mutation(api.votes.submit, {
       sessionId: sessionId as Id<"sessions">,
       participantId: participantId as Id<"participants">,
       countries,
+    });
+
+    // Set cookie to prevent double voting (expires in 30 days)
+    cookieStore.set(`voted_${sessionId}`, participantId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+      path: "/",
     });
   } catch (error) {
     const err = error as Error;
