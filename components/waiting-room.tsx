@@ -1,0 +1,142 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Clock, CheckCircle, Circle, Users, Loader2, Eye } from "lucide-react";
+import { Id } from "@/convex/_generated/dataModel";
+import { useActionState } from "react";
+import { revealResults } from "@/app/actions";
+
+interface WaitingRoomProps {
+  sessionId: string;
+  isCreator: boolean;
+  username: string;
+  creatorId?: string;
+}
+
+export function WaitingRoom({ sessionId, isCreator, username, creatorId }: WaitingRoomProps) {
+  const session = useQuery(api.sessions.get, { sessionId: sessionId as Id<"sessions"> });
+  const router = useRouter();
+  const [state, formAction, isPending] = useActionState(revealResults, null);
+
+  useEffect(() => {
+    // Auto-redirect to results when voting is complete
+    if (session?.status === "completed") {
+      router.refresh();
+    }
+  }, [session?.status, router]);
+
+  if (!session) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  const votedCount = session.participants.filter((p) => p.hasVoted).length;
+  const totalCount = session.participants.length;
+  const allVoted = votedCount === totalCount && totalCount > 0;
+
+  return (
+    <div className="w-full max-w-md">
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 text-white mb-4">
+          <Clock className="w-8 h-8" />
+        </div>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Waiting for Votes</h1>
+        <p className="text-gray-600 dark:text-gray-300">
+          Welcome, <span className="font-semibold">{username}</span>!
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Vote Progress</CardTitle>
+          <CardDescription>
+            {votedCount} of {totalCount} participants have voted
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Progress bar */}
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+            <div
+              className="bg-blue-600 h-full transition-all duration-500 ease-out"
+              style={{ width: `${(votedCount / totalCount) * 100}%` }}
+            />
+          </div>
+
+          {/* Participants list */}
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {session.participants.map((participant) => (
+              <div
+                key={participant._id.toString()}
+                className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                {participant.hasVoted ? (
+                  <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                ) : (
+                  <Circle className="w-5 h-5 text-gray-400" />
+                )}
+                <span className="flex-1 font-medium text-sm">{participant.username}</span>
+                <span
+                  className={`text-xs font-semibold ${
+                    participant.hasVoted ? "text-green-600 dark:text-green-400" : "text-gray-400"
+                  }`}>
+                  {participant.hasVoted ? "Voted" : "Waiting"}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {isCreator && !allVoted && (
+            <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <Users className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5" />
+              <p className="text-sm text-blue-900 dark:text-blue-100">
+                As the creator, you can reveal the results once all participants have submitted
+                their votes.
+              </p>
+            </div>
+          )}
+
+          {isCreator && allVoted && (
+            <form action={formAction}>
+              <input type="hidden" name="sessionId" value={sessionId} />
+              <input type="hidden" name="creatorId" value={creatorId} />
+              <div className="space-y-3">
+                <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                  <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5" />
+                  <p className="text-sm text-green-900 dark:text-green-100 font-semibold">
+                    All participants have voted! You can now reveal the results.
+                  </p>
+                </div>
+                <Button
+                  type="submit"
+                  disabled={isPending}
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                  {isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Revealing...
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-4 h-4 mr-2" />
+                      Reveal Results
+                    </>
+                  )}
+                </Button>
+                {state && !state.success && state.errors?.form && (
+                  <p className="text-sm text-red-600 dark:text-red-400">{state.errors.form[0]}</p>
+                )}
+              </div>
+            </form>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
