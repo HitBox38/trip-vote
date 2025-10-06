@@ -2,16 +2,17 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Globe, Users, Clock, Loader2 } from "lucide-react";
+import { Globe, Users, Clock, Loader2, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { JoinVoteForm } from "./join-vote-form";
 import { Id } from "@/convex/_generated/dataModel";
 
 interface SessionInfoProps {
   sessionId: string;
+  alreadyVoted?: boolean;
 }
 
-export function SessionInfo({ sessionId }: SessionInfoProps) {
+export function SessionInfo({ sessionId, alreadyVoted = false }: SessionInfoProps) {
   const session = useQuery(api.sessions.get, { sessionId: sessionId as Id<"sessions"> });
 
   if (session === undefined) {
@@ -70,7 +71,17 @@ export function SessionInfo({ sessionId }: SessionInfoProps) {
             <span className="text-sm font-bold capitalize">{session.status}</span>
           </div>
 
-          {!isFull ? (
+          {alreadyVoted ? (
+            <div className="text-center py-6">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 mb-3">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <p className="text-green-600 dark:text-green-400 font-semibold mb-1">Already Voted</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                You have already submitted your vote for this session
+              </p>
+            </div>
+          ) : !isFull ? (
             <>
               <div className="border-t pt-4">
                 <h3 className="text-sm font-semibold mb-3">Join the Vote</h3>
