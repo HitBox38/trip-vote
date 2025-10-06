@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, CheckCircle, Circle, Users, Loader2, Eye } from "lucide-react";
+import { Clock, CheckCircle, Circle, Users, Loader2, Eye, Copy, Check, Link2 } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 import { useActionState } from "react";
 import { revealResults } from "@/app/actions";
@@ -22,6 +22,20 @@ export function WaitingRoom({ sessionId, isCreator, username, creatorId }: Waiti
   const session = useQuery(api.sessions.get, { sessionId: sessionId as Id<"sessions"> });
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(revealResults, null);
+  const [copied, setCopied] = useState(false);
+
+  const inviteUrl =
+    typeof window !== "undefined" ? `${window.location.origin}/vote/${sessionId}` : "";
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
 
   useEffect(() => {
     // Auto-redirect to results when voting is complete
@@ -53,6 +67,39 @@ export function WaitingRoom({ sessionId, isCreator, username, creatorId }: Waiti
           Welcome, <span className="font-semibold">{username}</span>!
         </p>
       </div>
+
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Link2 className="w-5 h-5" />
+            Invite Link
+          </CardTitle>
+          <CardDescription>Share this link with others to join the voting session</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              readOnly
+              value={inviteUrl}
+              className="flex-1 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md font-mono"
+            />
+            <Button
+              type="button"
+              onClick={copyToClipboard}
+              variant="outline"
+              size="icon"
+              className="shrink-0">
+              {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+            </Button>
+          </div>
+          {copied && (
+            <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+              Link copied to clipboard!
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
