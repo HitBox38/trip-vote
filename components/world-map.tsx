@@ -25,6 +25,11 @@ export const WorldMap = memo(function WorldMap({
   eligibleCountries = COUNTRIES,
 }: WorldMapProps) {
   const [position, setPosition] = useState({ coordinates: [0, 0], zoom: 1 });
+  const [hoveredCountry, setHoveredCountry] = useState<{
+    name: string;
+    x: number;
+    y: number;
+  } | null>(null);
 
   const handleZoomIn = () => {
     if (position.zoom >= 4) return;
@@ -90,6 +95,38 @@ export const WorldMap = memo(function WorldMap({
                         console.log("Calling onCountryClick with:", countryCode);
                         onCountryClick(countryCode);
                       }
+                    }}
+                    onMouseEnter={(event: React.MouseEvent<SVGPathElement>) => {
+                      if (
+                        country &&
+                        isEligible &&
+                        typeof window !== "undefined" &&
+                        window.innerWidth >= 768
+                      ) {
+                        setHoveredCountry({
+                          name: country.name,
+                          x: event.clientX,
+                          y: event.clientY,
+                        });
+                      }
+                    }}
+                    onMouseMove={(event: React.MouseEvent<SVGPathElement>) => {
+                      if (
+                        country &&
+                        isEligible &&
+                        hoveredCountry &&
+                        typeof window !== "undefined" &&
+                        window.innerWidth >= 768
+                      ) {
+                        setHoveredCountry({
+                          name: country.name,
+                          x: event.clientX,
+                          y: event.clientY,
+                        });
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      setHoveredCountry(null);
                     }}
                     style={{
                       default: {
@@ -214,6 +251,19 @@ export const WorldMap = memo(function WorldMap({
           Drag to pan • Scroll to zoom
         </p>
       </div>
+
+      {/* Tooltip for Desktop */}
+      {hoveredCountry && (
+        <div
+          className="fixed pointer-events-none z-[9999] bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-3 py-1.5 rounded-md text-sm font-medium shadow-lg"
+          style={{
+            left: `${hoveredCountry.x + 12}px`,
+            top: `${hoveredCountry.y + 12}px`,
+            transform: "translate(0, -50%)",
+          }}>
+          {hoveredCountry.name}
+        </div>
+      )}
     </div>
   );
 });
