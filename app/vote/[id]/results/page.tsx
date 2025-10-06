@@ -1,4 +1,4 @@
-import { ResultsDisplay } from "@/components/results-display";
+import { redirect } from "next/navigation";
 
 export default async function ResultsPage({
   params,
@@ -8,14 +8,12 @@ export default async function ResultsPage({
   searchParams: Promise<{ creator?: string; participant?: string }>;
 }) {
   const { id } = await params;
-  const { creator } = await searchParams;
+  const { creator, participant } = await searchParams;
 
-  const isCreator = !!creator;
-  const username = isCreator ? "Creator" : "Participant";
+  // Redirect to waiting page which now shows live results
+  const queryParams = new URLSearchParams();
+  if (creator) queryParams.set("creator", creator);
+  if (participant) queryParams.set("participant", participant);
 
-  return (
-    <div className="min-h-screen p-4 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <ResultsDisplay sessionId={id} isCreator={isCreator} username={username} />
-    </div>
-  );
+  redirect(`/vote/${id}/waiting?${queryParams.toString()}`);
 }

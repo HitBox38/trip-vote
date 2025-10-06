@@ -206,5 +206,5 @@ export async function revealResults(prevState: unknown, formData: FormData) {
   }
 
   // Redirect must be outside try/catch as it throws a special error
-  redirect(`/vote/${sessionId}/results?creator=${creatorId}`);
+  redirect(`/vote/${sessionId}/waiting?creator=${creatorId}`);
 }
