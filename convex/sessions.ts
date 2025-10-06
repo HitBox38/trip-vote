@@ -78,15 +78,15 @@ export const revealResults = mutation({
       throw new Error("Only the creator can reveal results");
     }
 
-    // Check if all participants have voted
+    // Check if at least one participant has voted
     const participants = await ctx.db
       .query("participants")
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
       .collect();
 
-    const allVoted = participants.every((p) => p.hasVoted);
-    if (!allVoted) {
-      throw new Error("Not all participants have voted yet");
+    const hasVotes = participants.some((p) => p.hasVoted);
+    if (!hasVotes) {
+      throw new Error("At least one participant must vote before revealing results");
     }
 
     // Update session status to completed

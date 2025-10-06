@@ -9,6 +9,7 @@ import { Trophy, Medal, Award, MapPin, Users, Loader2 } from "lucide-react";
 import { getCountryName } from "@/lib/countries";
 import Link from "next/link";
 import { Id } from "@/convex/_generated/dataModel";
+import { ShareResultsButton } from "@/components/share-results-button";
 
 interface ResultsDisplayProps {
   sessionId: string;
@@ -58,8 +59,18 @@ export function ResultsDisplay({ sessionId, isCreator, username }: ResultsDispla
       {topCountries.length > 0 && (
         <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-gray-800 dark:to-gray-800 border-yellow-200 dark:border-yellow-800">
           <CardHeader>
-            <CardTitle className="text-2xl">🏆 Top Destinations</CardTitle>
-            <CardDescription>The most popular choices from your group</CardDescription>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <CardTitle className="text-2xl">🏆 Top Destinations</CardTitle>
+                <CardDescription>The most popular choices from your group</CardDescription>
+              </div>
+              <ShareResultsButton
+                results={results.results}
+                sessionId={sessionId}
+                isEnabled={true}
+                participantCount={results.participants.length}
+              />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-3 gap-4">

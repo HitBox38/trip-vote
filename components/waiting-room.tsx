@@ -55,6 +55,7 @@ export function WaitingRoom({ sessionId, isCreator, username, creatorId }: Waiti
   const votedCount = session.participants.filter((p) => p.hasVoted).length;
   const totalCount = session.participants.length;
   const allVoted = votedCount === totalCount && totalCount > 0;
+  const hasVotes = votedCount > 0;
 
   return (
     <div className="w-full max-w-md">
@@ -139,40 +140,48 @@ export function WaitingRoom({ sessionId, isCreator, username, creatorId }: Waiti
             ))}
           </div>
 
-          {isCreator && !allVoted && (
-            <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <Users className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5" />
-              <p className="text-sm text-blue-900 dark:text-blue-100">
-                As the creator, you can reveal the results once all participants have submitted
-                their votes.
-              </p>
-            </div>
-          )}
-
-          {isCreator && allVoted && (
+          {isCreator && (
             <form action={formAction}>
               <input type="hidden" name="sessionId" value={sessionId} />
               <input type="hidden" name="creatorId" value={creatorId} />
               <div className="space-y-3">
-                <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                  <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5" />
-                  <p className="text-sm text-green-900 dark:text-green-100 font-semibold">
-                    All participants have voted! You can now reveal the results.
-                  </p>
-                </div>
+                {allVoted ? (
+                  <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5" />
+                    <p className="text-sm text-green-900 dark:text-green-100 font-semibold">
+                      All participants have voted! You can now close the vote and reveal the
+                      results.
+                    </p>
+                  </div>
+                ) : hasVotes ? (
+                  <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <Users className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5" />
+                    <p className="text-sm text-blue-900 dark:text-blue-100">
+                      As the creator, you can close the vote at any time. {votedCount} of{" "}
+                      {totalCount} participants have voted so far.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <Users className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5" />
+                    <p className="text-sm text-amber-900 dark:text-amber-100">
+                      Waiting for at least one participant to vote before you can close the vote.
+                    </p>
+                  </div>
+                )}
                 <Button
                   type="submit"
-                  disabled={isPending}
+                  disabled={isPending || !hasVotes}
                   className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
                   {isPending ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Revealing...
+                      Closing Vote...
                     </>
                   ) : (
                     <>
                       <Eye className="w-4 h-4 mr-2" />
-                      Reveal Results
+                      Close Vote & Reveal Results
                     </>
                   )}
                 </Button>

@@ -26,6 +26,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { useActionState } from "react";
 import { revealResults } from "@/app/actions";
 import { getCountryName } from "@/lib/countries";
+import { ShareResultsButton } from "@/components/share-results-button";
 
 interface LiveResultsProps {
   sessionId: string;
@@ -73,8 +74,11 @@ export function LiveResults({ sessionId, isCreator, username, creatorId }: LiveR
   const totalCount = session.participants.length;
   const maxParticipants = session.maxParticipants;
   const allVoted = votedCount === totalCount && totalCount > 0;
+  const hasVotes = votedCount > 0;
   const isCompleted = session.status === "completed";
   const hasResults = results.results.length > 0;
+  const maxParticipantsReached = totalCount === maxParticipants && votedCount === maxParticipants;
+  const canShare = isCompleted || maxParticipantsReached;
 
   const getMedalIcon = (index: number) => {
     switch (index) {
@@ -180,40 +184,45 @@ export function LiveResults({ sessionId, isCreator, username, creatorId }: LiveR
             ))}
           </div>
 
-          {isCreator && !allVoted && (
-            <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <Users className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5" />
-              <p className="text-sm text-blue-900 dark:text-blue-100">
-                As the creator, you can reveal the results once all participants have submitted
-                their votes.
-              </p>
-            </div>
-          )}
-
-          {isCreator && allVoted && !isCompleted && (
+          {isCreator && !isCompleted && (
             <form action={formAction}>
               <input type="hidden" name="sessionId" value={sessionId} />
               <input type="hidden" name="creatorId" value={creatorId} />
               <div className="space-y-3">
-                <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                  <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5" />
-                  <p className="text-sm text-green-900 dark:text-green-100 font-semibold">
-                    All participants have voted! You can now reveal the results.
-                  </p>
-                </div>
-                <Button
-                  type="submit"
-                  disabled={isPending}
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                {allVoted ? (
+                  <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5" />
+                    <p className="text-sm text-green-900 dark:text-green-100 font-semibold">
+                      All participants have voted! You can now close the vote and reveal the
+                      results.
+                    </p>
+                  </div>
+                ) : hasVotes ? (
+                  <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <Users className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5" />
+                    <p className="text-sm text-blue-900 dark:text-blue-100">
+                      As the creator, you can close the vote at any time. {votedCount} of{" "}
+                      {totalCount} participants have voted so far.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <Users className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5" />
+                    <p className="text-sm text-amber-900 dark:text-amber-100">
+                      Waiting for at least one participant to vote before you can close the vote.
+                    </p>
+                  </div>
+                )}
+                <Button type="submit" disabled={isPending || !hasVotes} className="w-full">
                   {isPending ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Revealing...
+                      Closing Vote...
                     </>
                   ) : (
                     <>
                       <Eye className="w-4 h-4 mr-2" />
-                      Reveal Results
+                      Close Vote & Reveal Results
                     </>
                   )}
                 </Button>
@@ -233,14 +242,24 @@ export function LiveResults({ sessionId, isCreator, username, creatorId }: LiveR
           {(isCompleted || votedCount > 0) && results.results.length > 0 && (
             <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-gray-800 dark:to-gray-800 border-yellow-200 dark:border-yellow-800">
               <CardHeader>
-                <CardTitle className="text-2xl">
-                  {isCompleted ? "🏆 Final Results" : "📊 Current Leaders"}
-                </CardTitle>
-                <CardDescription>
-                  {isCompleted
-                    ? "The most popular choices from your group"
-                    : "Live rankings (will be finalized when all votes are in)"}
-                </CardDescription>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <CardTitle className="text-2xl">
+                      {isCompleted ? "🏆 Final Results" : "📊 Current Leaders"}
+                    </CardTitle>
+                    <CardDescription>
+                      {isCompleted
+                        ? "The most popular choices from your group"
+                        : "Live rankings (will be finalized when all votes are in)"}
+                    </CardDescription>
+                  </div>
+                  <ShareResultsButton
+                    results={results.results}
+                    sessionId={sessionId}
+                    isEnabled={canShare}
+                    participantCount={votedCount}
+                  />
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-3 gap-4">
