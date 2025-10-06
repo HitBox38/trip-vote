@@ -165,11 +165,13 @@ export function CreateVoteForm() {
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="none">No restriction - All countries available</SelectItem>
-                    {COUNTRIES.map((country) => (
-                      <SelectItem key={country.code} value={country.code}>
-                        {country.name}
-                      </SelectItem>
-                    ))}
+                    {[...COUNTRIES]
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((country) => (
+                        <SelectItem key={country.code} value={country.code}>
+                          {country.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 <input type="hidden" name="originCountry" value={field.value || ""} />

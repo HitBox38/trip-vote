@@ -131,37 +131,39 @@ export function VotingInterface({ sessionId, participantId, username }: VotingIn
                   <CommandList>
                     <CommandEmpty>No country found.</CommandEmpty>
                     <CommandGroup>
-                      {eligibleCountries.map((country) => {
-                        const isSelected = selectedCountries.includes(country.code);
-                        const canSelectMore = selectedCountries.length < 5;
-                        const isDisabled = !isSelected && !canSelectMore;
+                      {[...eligibleCountries]
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((country) => {
+                          const isSelected = selectedCountries.includes(country.code);
+                          const canSelectMore = selectedCountries.length < 5;
+                          const isDisabled = !isSelected && !canSelectMore;
 
-                        return (
-                          <CommandItem
-                            key={country.code}
-                            value={`${country.name} ${country.code}`}
-                            onSelect={() => {
-                              if (!isDisabled) {
-                                toggleCountry(country.code);
-                              }
-                            }}
-                            disabled={isDisabled}
-                            className={cn(
-                              "flex items-center gap-2",
-                              isDisabled && "opacity-50 cursor-not-allowed"
-                            )}>
-                            <Check
-                              className={cn("h-4 w-4", isSelected ? "opacity-100" : "opacity-0")}
-                            />
-                            <span className="flex-1">{country.name}</span>
-                            {isSelected && (
-                              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-xs font-bold">
-                                {selectedCountries.indexOf(country.code) + 1}
-                              </span>
-                            )}
-                          </CommandItem>
-                        );
-                      })}
+                          return (
+                            <CommandItem
+                              key={country.code}
+                              value={`${country.name} ${country.code}`}
+                              onSelect={() => {
+                                if (!isDisabled) {
+                                  toggleCountry(country.code);
+                                }
+                              }}
+                              disabled={isDisabled}
+                              className={cn(
+                                "flex items-center gap-2",
+                                isDisabled && "opacity-50 cursor-not-allowed"
+                              )}>
+                              <Check
+                                className={cn("h-4 w-4", isSelected ? "opacity-100" : "opacity-0")}
+                              />
+                              <span className="flex-1">{country.name}</span>
+                              {isSelected && (
+                                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-xs font-bold">
+                                  {selectedCountries.indexOf(country.code) + 1}
+                                </span>
+                              )}
+                            </CommandItem>
+                          );
+                        })}
                     </CommandGroup>
                   </CommandList>
                 </Command>
