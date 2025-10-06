@@ -89,9 +89,10 @@ export const revealResults = mutation({
       throw new Error("At least one participant must vote before revealing results");
     }
 
-    // Update session status to completed
+    // Update session status to completed with timestamp
     await ctx.db.patch(args.sessionId, {
       status: "completed",
+      completedAt: Date.now(),
     });
 
     return true;

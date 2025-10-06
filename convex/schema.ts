@@ -7,8 +7,11 @@ export default defineSchema({
     maxParticipants: v.number(),
     status: v.union(v.literal("waiting"), v.literal("voting"), v.literal("completed")),
     createdAt: v.number(),
+    completedAt: v.optional(v.number()), // Timestamp when vote was completed
     originCountry: v.optional(v.string()), // Optional country code to limit voter choices
-  }).index("by_created_at", ["createdAt"]),
+  })
+    .index("by_created_at", ["createdAt"])
+    .index("by_completed_at", ["completedAt"]),
 
   participants: defineTable({
     sessionId: v.id("sessions"),

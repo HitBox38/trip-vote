@@ -13,6 +13,8 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as cleanup from "../cleanup.js";
+import type * as crons from "../crons.js";
 import type * as participants from "../participants.js";
 import type * as sessions from "../sessions.js";
 import type * as votes from "../votes.js";
@@ -26,6 +28,8 @@ import type * as votes from "../votes.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  cleanup: typeof cleanup;
+  crons: typeof crons;
   participants: typeof participants;
   sessions: typeof sessions;
   votes: typeof votes;
