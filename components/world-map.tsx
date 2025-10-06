@@ -66,6 +66,15 @@ export const WorldMap = memo(function WorldMap({
           onMoveEnd={handleMoveEnd}
           minZoom={1}
           maxZoom={4}>
+          {/* Background rect for drag functionality */}
+          <rect
+            x={-2000}
+            y={-1000}
+            width={4000}
+            height={2000}
+            fill="transparent"
+            style={{ cursor: "grab" }}
+          />
           <Geographies geography={geoUrl}>
             {({ geographies }: { geographies: any[] }) =>
               geographies.map((geo: any) => {
