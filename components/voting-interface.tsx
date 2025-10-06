@@ -5,13 +5,24 @@ import { submitVotes } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { COUNTRIES } from "@/lib/countries";
-import { MapPin, ArrowUp, ArrowDown, Trash2, Loader2 } from "lucide-react";
+import { MapPin, ArrowUp, ArrowDown, Trash2, Loader2, Check, ChevronsUpDown } from "lucide-react";
 import { useVotingStore } from "@/lib/voting-store";
 import { WorldMap } from "@/components/world-map";
 import { useQuery as useConvexQuery } from "convex/react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 interface VotingInterfaceProps {
   sessionId: string;
@@ -23,6 +34,7 @@ export function VotingInterface({ sessionId, participantId, username }: VotingIn
   const { selectedCountries, toggleCountry, moveUp, moveDown, removeCountry } = useVotingStore();
   const [state, formAction, isPending] = useActionState(submitVotes, null);
   const session = useConvexQuery(api.sessions.get, { sessionId: sessionId as Id<"sessions"> });
+  const [open, setOpen] = useState(false);
 
   const getCountryName = (code: string) => COUNTRIES.find((c) => c.code === code)?.name || code;
 
@@ -89,6 +101,91 @@ export function VotingInterface({ sessionId, participantId, username }: VotingIn
       </div>
 
       <div className="space-y-6">
+        {/* Country Search Combobox - Mobile Friendly */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Search & Select Countries</CardTitle>
+            <CardDescription>
+              Search and select destinations ({selectedCountries.length}/5 selected)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Popover open={open} onOpenChange={setOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={open}
+                  className="w-full justify-between h-auto min-h-[40px] py-2">
+                  <span className="text-left truncate">
+                    {selectedCountries.length > 0
+                      ? `${selectedCountries.length} ${selectedCountries.length === 1 ? "country" : "countries"} selected`
+                      : "Select a country..."}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search countries..." className="h-9" />
+                  <CommandList>
+                    <CommandEmpty>No country found.</CommandEmpty>
+                    <CommandGroup>
+                      {eligibleCountries.map((country) => {
+                        const isSelected = selectedCountries.includes(country.code);
+                        const canSelectMore = selectedCountries.length < 5;
+                        const isDisabled = !isSelected && !canSelectMore;
+
+                        return (
+                          <CommandItem
+                            key={country.code}
+                            value={`${country.name} ${country.code}`}
+                            onSelect={() => {
+                              if (!isDisabled) {
+                                toggleCountry(country.code);
+                              }
+                            }}
+                            disabled={isDisabled}
+                            className={cn(
+                              "flex items-center gap-2",
+                              isDisabled && "opacity-50 cursor-not-allowed"
+                            )}>
+                            <Check
+                              className={cn("h-4 w-4", isSelected ? "opacity-100" : "opacity-0")}
+                            />
+                            <span className="flex-1">{country.name}</span>
+                            {isSelected && (
+                              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-xs font-bold">
+                                {selectedCountries.indexOf(country.code) + 1}
+                              </span>
+                            )}
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+
+            {/* Show selected countries as badges */}
+            {selectedCountries.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {selectedCountries.map((countryCode, index) => (
+                  <div
+                    key={countryCode}
+                    className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100 rounded-full text-sm font-medium">
+                    <span className="flex items-center justify-center w-4 h-4 rounded-full bg-blue-600 text-white text-xs font-bold">
+                      {index + 1}
+                    </span>
+                    <span>{getCountryName(countryCode)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Interactive World Map */}
         <Card>
           <CardHeader>
