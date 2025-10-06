@@ -11,6 +11,20 @@ import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 const geoUrl =
   "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson";
 
+// Natural Earth has issues with some countries - map their names/codes to our ISO codes
+const NATURAL_EARTH_FIXES: Record<string, string> = {
+  // Country name to ISO code mappings
+  Norway: "NO",
+  France: "FR",
+  Kosovo: "XK",
+  // ISO_A3 to ISO_A2 mappings for problematic countries
+  NOR: "NO",
+  FRA: "FR",
+  KOS: "XK",
+  // Some territories that Natural Earth marks as "-99"
+  "-99": "", // Will be handled by name matching
+};
+
 interface WorldMapProps {
   selectedCountries: string[];
   onCountryClick: (countryCode: string) => void;
@@ -78,8 +92,30 @@ export const WorldMap = memo(function WorldMap({
           <Geographies geography={geoUrl}>
             {({ geographies }: { geographies: any[] }) =>
               geographies.map((geo: any) => {
-                // Natural Earth data uses ISO_A2 property
-                const countryCode = geo.properties?.ISO_A2 || geo.properties?.ADM0_A3;
+                // Natural Earth data uses ISO_A2 property, with fallbacks for problematic countries
+                let countryCode = geo.properties?.ISO_A2;
+
+                // Handle problematic countries
+                if (!countryCode || countryCode === "-99" || NATURAL_EARTH_FIXES[countryCode]) {
+                  // Try ISO_A3 mapping
+                  const isoA3 = geo.properties?.ISO_A3;
+                  if (isoA3 && NATURAL_EARTH_FIXES[isoA3]) {
+                    countryCode = NATURAL_EARTH_FIXES[isoA3];
+                  }
+                  // Try ADM0_A3 mapping
+                  else if (geo.properties?.ADM0_A3 && NATURAL_EARTH_FIXES[geo.properties.ADM0_A3]) {
+                    countryCode = NATURAL_EARTH_FIXES[geo.properties.ADM0_A3];
+                  }
+                  // Try name matching
+                  else if (geo.properties?.NAME && NATURAL_EARTH_FIXES[geo.properties.NAME]) {
+                    countryCode = NATURAL_EARTH_FIXES[geo.properties.NAME];
+                  }
+                  // Fallback to ADM0_A3
+                  else if (!countryCode || countryCode === "-99") {
+                    countryCode = geo.properties?.ADM0_A3;
+                  }
+                }
+
                 const country = COUNTRIES.find((c) => c.code === countryCode);
                 const isEligible = eligibleCountries.some((c) => c.code === countryCode);
                 const isSelected = country && selectedCountries.includes(countryCode);
