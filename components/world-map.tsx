@@ -25,6 +25,9 @@ const NATURAL_EARTH_FIXES: Record<string, string> = {
   "-99": "", // Will be handled by name matching
 };
 
+const MAX_ZOOM = 10;
+const MIN_ZOOM = 1;
+
 interface WorldMapProps {
   selectedCountries: string[];
   onCountryClick: (countryCode: string) => void;
@@ -46,12 +49,12 @@ export const WorldMap = memo(function WorldMap({
   } | null>(null);
 
   const handleZoomIn = () => {
-    if (position.zoom >= 4) return;
+    if (position.zoom >= MAX_ZOOM) return;
     setPosition((pos) => ({ ...pos, zoom: pos.zoom * 1.5 }));
   };
 
   const handleZoomOut = () => {
-    if (position.zoom <= 1) return;
+    if (position.zoom <= MIN_ZOOM) return;
     setPosition((pos) => ({ ...pos, zoom: pos.zoom / 1.5 }));
   };
 
@@ -78,8 +81,8 @@ export const WorldMap = memo(function WorldMap({
           zoom={position.zoom}
           center={position.coordinates as [number, number]}
           onMoveEnd={handleMoveEnd}
-          minZoom={1}
-          maxZoom={4}>
+          minZoom={MIN_ZOOM}
+          maxZoom={MAX_ZOOM}>
           {/* Background rect for drag functionality */}
           <rect
             x={-2000}
@@ -259,7 +262,7 @@ export const WorldMap = memo(function WorldMap({
           variant="secondary"
           size="icon"
           onClick={handleZoomIn}
-          disabled={position.zoom >= 4}
+          disabled={position.zoom >= MAX_ZOOM}
           className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 shadow-lg"
           title="Zoom In">
           <ZoomIn className="w-4 h-4" />
@@ -269,7 +272,7 @@ export const WorldMap = memo(function WorldMap({
           variant="secondary"
           size="icon"
           onClick={handleZoomOut}
-          disabled={position.zoom <= 1}
+          disabled={position.zoom <= MIN_ZOOM}
           className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 shadow-lg"
           title="Zoom Out">
           <ZoomOut className="w-4 h-4" />
