@@ -17,10 +17,17 @@ const NATURAL_EARTH_FIXES: Record<string, string> = {
   Norway: "NO",
   France: "FR",
   Kosovo: "XK",
-  // ISO_A3 to ISO_A2 mappings for problematic countries
+  Taiwan: "TW",
+  "Chinese Taipei": "TW",
+  "China, Republic of": "TW",
+  "Republic of China": "TW",
+  // ISO_A2/A3 to ISO_A2 mappings for problematic countries
   NOR: "NO",
   FRA: "FR",
   KOS: "XK",
+  TWN: "TW",
+  "CN-TW": "TW", // Natural Earth uses this for Taiwan
+  RC: "TW",
   // Some territories that Natural Earth marks as "-99"
   "-99": "", // Will be handled by name matching
 };
@@ -98,8 +105,12 @@ export const WorldMap = memo(function WorldMap({
                 // Natural Earth data uses ISO_A2 property, with fallbacks for problematic countries
                 let countryCode = geo.properties?.ISO_A2;
 
-                // Handle problematic countries
-                if (!countryCode || countryCode === "-99" || NATURAL_EARTH_FIXES[countryCode]) {
+                // Check if we need to apply a fix to the ISO_A2 code
+                if (countryCode && NATURAL_EARTH_FIXES[countryCode]) {
+                  countryCode = NATURAL_EARTH_FIXES[countryCode];
+                }
+                // Handle missing or invalid codes
+                else if (!countryCode || countryCode === "-99") {
                   // Try ISO_A3 mapping
                   const isoA3 = geo.properties?.ISO_A3;
                   if (isoA3 && NATURAL_EARTH_FIXES[isoA3]) {
@@ -109,12 +120,26 @@ export const WorldMap = memo(function WorldMap({
                   else if (geo.properties?.ADM0_A3 && NATURAL_EARTH_FIXES[geo.properties.ADM0_A3]) {
                     countryCode = NATURAL_EARTH_FIXES[geo.properties.ADM0_A3];
                   }
-                  // Try name matching
+                  // Try name matching (check multiple name fields)
                   else if (geo.properties?.NAME && NATURAL_EARTH_FIXES[geo.properties.NAME]) {
                     countryCode = NATURAL_EARTH_FIXES[geo.properties.NAME];
+                  } else if (
+                    geo.properties?.NAME_LONG &&
+                    NATURAL_EARTH_FIXES[geo.properties.NAME_LONG]
+                  ) {
+                    countryCode = NATURAL_EARTH_FIXES[geo.properties.NAME_LONG];
+                  } else if (
+                    geo.properties?.FORMAL_EN &&
+                    NATURAL_EARTH_FIXES[geo.properties.FORMAL_EN]
+                  ) {
+                    countryCode = NATURAL_EARTH_FIXES[geo.properties.FORMAL_EN];
+                  }
+                  // Try BRK_A3 (used for some disputed territories)
+                  else if (geo.properties?.BRK_A3 && NATURAL_EARTH_FIXES[geo.properties.BRK_A3]) {
+                    countryCode = NATURAL_EARTH_FIXES[geo.properties.BRK_A3];
                   }
                   // Fallback to ADM0_A3
-                  else if (!countryCode || countryCode === "-99") {
+                  else {
                     countryCode = geo.properties?.ADM0_A3;
                   }
                 }
