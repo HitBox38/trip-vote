@@ -123,6 +123,7 @@ export const COUNTRIES = [
   { code: "NP", name: "Nepal", lat: 28.3949, lon: 84.124 },
   { code: "NL", name: "Netherlands", lat: 52.1326, lon: 5.2913 },
   { code: "NZ", name: "New Zealand", lat: -40.9006, lon: 174.886 },
+  { code: "NC", name: "New Caledonia", lat: -21.2597, lon: 165.5783 },
   { code: "NI", name: "Nicaragua", lat: 12.8654, lon: -85.2072 },
   { code: "NE", name: "Niger", lat: 17.6078, lon: 8.0817 },
   { code: "NG", name: "Nigeria", lat: 9.082, lon: 8.6753 },
