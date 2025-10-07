@@ -251,25 +251,37 @@ export const WorldMap = memo(function WorldMap({
             if (!country) return null;
 
             const rank = selectedCountries.indexOf(countryCode) + 1;
+            // Scale markers inversely with zoom so they remain consistent size
+            const markerScale = 1 / position.zoom;
+            const circleRadius = 10 * markerScale;
+            const strokeWidth = 2.5 * markerScale;
+            const fontSize = 13 * markerScale;
+            const textY = 5 * markerScale;
 
             return (
               <Marker key={countryCode} coordinates={[country.lon, country.lat]}>
-                <g>
+                <g
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCountryClick(countryCode);
+                  }}
+                  style={{ cursor: "pointer" }}>
                   <circle
-                    r={8}
+                    r={circleRadius}
                     fill="#ef4444"
                     stroke="#fff"
-                    strokeWidth={2}
+                    strokeWidth={strokeWidth}
                     className="animate-pulse"
                   />
                   <text
                     textAnchor="middle"
-                    y={4}
+                    y={textY}
                     style={{
                       fontFamily: "system-ui",
-                      fontSize: "10px",
+                      fontSize: `${fontSize}px`,
                       fontWeight: "bold",
                       fill: "#fff",
+                      pointerEvents: "none",
                     }}>
                     {rank}
                   </text>
