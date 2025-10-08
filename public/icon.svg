@@ -1,0 +1,14 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="512" height="512" rx="128" fill="#3b82f6" />
+
+    <!-- Globe Icon -->
+    <circle cx="256" cy="256" r="140" stroke="white" stroke-width="12" fill="none" />
+    <ellipse cx="256" cy="256" rx="140" ry="70" stroke="white" stroke-width="12" fill="none" />
+    <ellipse cx="256" cy="256" rx="70" ry="140" stroke="white" stroke-width="12" fill="none" />
+    <line x1="256" y1="116" x2="256" y2="396" stroke="white" stroke-width="12" />
+
+    <!-- Checkmark overlay -->
+    <path d="M200 256 L235 291 L312 214" stroke="white" stroke-width="16" stroke-linecap="round"
+        stroke-linejoin="round" fill="none" />
+</svg>

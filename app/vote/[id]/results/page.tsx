@@ -1,4 +1,16 @@
 import { redirect } from "next/navigation";
+import { Metadata } from "next";
+
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: "Final Results",
+    description: "View the final results of this collaborative travel voting session.",
+    robots: {
+      index: false,
+      follow: false,
+    },
+  };
+}
 
 export default async function ResultsPage({
   params,

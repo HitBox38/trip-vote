@@ -1,4 +1,30 @@
 import { LiveResults } from "@/components/live-results";
+import { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+
+  return {
+    title: "Vote Results",
+    description:
+      "View real-time voting results and see which destinations are winning the group vote.",
+    openGraph: {
+      title: "Vote Results | Trip Vote",
+      description:
+        "View real-time voting results and see which destinations are winning the group vote.",
+      url: `/vote/${id}/waiting`,
+      type: "website",
+    },
+    robots: {
+      index: false,
+      follow: false,
+    },
+  };
+}
 
 export default async function WaitingPage({
   params,

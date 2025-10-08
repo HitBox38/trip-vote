@@ -1,0 +1,25 @@
+# humanstxt.org/
+# The humans responsible and technology colophon
+
+# TEAM
+
+    Developer: Trip Vote Team
+    Site: https://trip-vote.vercel.app
+    Location: Global
+
+# THANKS
+
+    All the open source contributors who made this possible
+
+# TECHNOLOGY COLOPHON
+
+    Next.js 15
+    React 19
+    TypeScript
+    Tailwind CSS
+    shadcn/ui
+    Convex Database
+    Vercel Analytics
+    Zustand
+    Zod
+    React Hook Form
