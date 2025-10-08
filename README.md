@@ -7,16 +7,21 @@ A collaborative voting application to help groups decide their next travel desti
 - **Create Vote Sessions**: Set up a vote with a custom number of participants (2-20)
 - **Unique Shareable Links**: Each vote session generates a unique link to invite participants
 - **User Join System**: Participants join with a username
-- **Interactive Country Selection**: Choose up to 5 countries from a comprehensive list
+- **Interactive World Map**: Visual country selection with zoomable, pannable world map interface
+- **Smart Country Suggestions**: Visa-aware destination recommendations based on passport data
 - **Ranking System**: Participants rank their selected countries by preference
-- **Real-time Progress**: See who has voted in real-time
+- **Live Results Dashboard**: Real-time voting progress with animated progress bars and participant status
+- **Creator Controls**: Session creators can manually close voting and reveal results
+- **Results Sharing**: Share formatted results via native sharing or clipboard copy
+- **Dark Mode Support**: Toggle between light, dark, and system theme preferences
 - **Automatic Results**: Results are automatically displayed when all participants have voted
 - **Points-based Scoring**: Countries are scored based on rankings (1st = 5pts, 2nd = 4pts, etc.)
+- **Automated Cleanup**: Old sessions are automatically cleaned up (1 week for completed, 2 weeks for abandoned)
 
 ## Tech Stack
 
-- **Next.js 15**: App Router with Server Components
-- **React 19**: Latest features including `useActionState`
+- **Next.js 15**: App Router with Server Components and API Routes
+- **React 19**: Latest features including `useActionState` and React Compiler
 - **TypeScript**: Full type safety
 - **Tailwind CSS**: Modern, responsive styling
 - **shadcn/ui**: Beautiful, accessible UI components
@@ -24,6 +29,10 @@ A collaborative voting application to help groups decide their next travel desti
 - **Zod**: Schema validation (client & server)
 - **Convex**: Real-time database with automatic sync across devices
 - **Zustand**: Local state management for UI interactions
+- **next-themes**: Dark mode support with system preference detection
+- **react-simple-maps**: Interactive, zoomable world map component
+- **@tanstack/react-query**: Enhanced data fetching and caching
+- **@vercel/analytics**: Application analytics and monitoring
 
 ## Getting Started
 
@@ -113,13 +122,18 @@ pnpm dev
 trip-vote/
 ├── app/
 │   ├── actions.ts              # Server Actions for forms
+│   ├── api/
+│   │   ├── destinations/
+│   │   │   └── route.ts        # Visa-aware destination API
+│   │   └── vote/
+│   │       └── [id]/           # Vote session API endpoints
 │   ├── providers.tsx           # Convex provider setup
 │   ├── page.tsx                # Home page
 │   ├── vote/
 │   │   └── [id]/
 │   │       ├── page.tsx        # Join session page
 │   │       ├── voting/
-│   │       │   └── page.tsx    # Voting interface
+│   │       │   └── page.tsx    # Voting interface with world map
 │   │       ├── waiting/
 │   │       │   └── page.tsx    # Waiting room
 │   │       └── results/
@@ -129,19 +143,28 @@ trip-vote/
 │   ├── ui/                     # shadcn/ui components
 │   ├── create-vote-form.tsx    # Create vote form
 │   ├── join-vote-form.tsx      # Join vote form
+│   ├── live-results.tsx        # Live results dashboard with progress
+│   ├── results-display.tsx     # Real-time results display
 │   ├── session-info.tsx        # Real-time session display
+│   ├── share-results-button.tsx # Share results functionality
+│   ├── theme-toggle.tsx        # Dark/light mode toggle
 │   ├── voting-interface.tsx    # Country selection & ranking
 │   ├── waiting-room.tsx        # Real-time waiting room
+│   ├── world-map.tsx          # Interactive world map component
 │   └── results-display.tsx     # Real-time results
 ├── convex/
+│   ├── cleanup.ts              # Automated session cleanup
+│   ├── crons.ts                # Scheduled cleanup jobs
 │   ├── schema.ts               # Convex database schema
 │   ├── sessions.ts             # Session mutations & queries
 │   ├── participants.ts         # Participant mutations & queries
 │   └── votes.ts                # Vote mutations & queries
 ├── lib/
-│   ├── voting-store.ts         # Zustand store for local state
 │   ├── countries.ts            # Country list and utilities
+│   ├── flight-routes.ts        # International flight connectivity data
+│   ├── voting-store.ts         # Zustand store for local state
 │   └── utils.ts                # Utility functions
+├── types/                      # TypeScript type definitions
 └── README.md
 ```
 
@@ -176,6 +199,39 @@ All forms work without JavaScript enabled:
 - No manual polling or WebSockets needed
 - Changes instantly reflect across all devices
 - Optimistic updates for better UX
+
+### Automated Session Management
+
+- **Scheduled Cleanup**: Daily cron jobs automatically remove old sessions
+- **Completed Sessions**: Deleted 1 week after completion to free up database space
+- **Abandoned Sessions**: Non-completed sessions deleted after 2 weeks of inactivity
+- **Database Optimization**: Prevents accumulation of stale data while preserving recent activity
+- **Zero Configuration**: Cleanup runs automatically in the background without manual intervention
+
+### API Endpoints
+
+#### Destinations API (`/api/destinations`)
+
+- **Visa-Aware Travel Planning**: Provides destination recommendations based on passport visa requirements
+- **Real-time Data**: Fetches current visa information from the Passport Visa API
+- **Fallback Support**: Uses static flight route data when external API is unavailable
+- **Caching**: 24-hour cache to minimize external API calls and improve performance
+- **Query Parameters**: `?origin=<country_code>` to get destinations accessible from an origin country
+
+**Example Usage:**
+
+```typescript
+// Get destinations accessible from United States
+const response = await fetch("/api/destinations?origin=US");
+const data = await response.json();
+// Returns: { destinations: ["CA", "GB", "FR", ...], source: "api|cache|fallback" }
+```
+
+#### Vote Session API (`/api/vote/[id]`)
+
+- **Session Management**: RESTful endpoints for vote session operations
+- **Real-time Integration**: Works seamlessly with Convex real-time subscriptions
+- **Progressive Enhancement**: Supports both JavaScript and non-JavaScript clients
 
 ## Production Considerations
 
