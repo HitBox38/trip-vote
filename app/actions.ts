@@ -83,6 +83,16 @@ export async function joinVote(prevState: unknown, formData: FormData) {
       sessionId: sessionId as Id<"sessions">,
       username,
     });
+
+    // Set cookie to track user joined this session (expires in 30 days)
+    const cookieStore = await cookies();
+    cookieStore.set(`joined_${sessionId}`, participantId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+      path: "/",
+    });
   } catch (error) {
     const err = error as Error;
     return {
@@ -207,4 +217,48 @@ export async function revealResults(prevState: unknown, formData: FormData) {
 
   // Redirect must be outside try/catch as it throws a special error
   redirect(`/vote/${sessionId}/waiting?creator=${creatorId}`);
+}
+
+// Get user's previous votes from cookies
+export async function getPreviousVotes() {
+  const cookieStore = await cookies();
+  const allCookies = cookieStore.getAll();
+
+  const votedSessions: { sessionId: string; participantId: string }[] = [];
+  const joinedSessions: { sessionId: string; participantId: string }[] = [];
+
+  // Parse all cookies to find voted and joined sessions
+  allCookies.forEach((cookie) => {
+    if (cookie.name.startsWith("voted_")) {
+      const sessionId = cookie.name.replace("voted_", "");
+      votedSessions.push({ sessionId, participantId: cookie.value });
+    } else if (cookie.name.startsWith("joined_")) {
+      const sessionId = cookie.name.replace("joined_", "");
+      // Only include if user didn't vote (no voted_ cookie for this session)
+      if (!allCookies.some((c) => c.name === `voted_${sessionId}`)) {
+        joinedSessions.push({ sessionId, participantId: cookie.value });
+      }
+    }
+  });
+
+  // Get all unique session IDs
+  const allSessionIds = [
+    ...votedSessions.map((s) => s.sessionId),
+    ...joinedSessions.map((s) => s.sessionId),
+  ];
+
+  if (allSessionIds.length === 0) {
+    return { votedSessions: [], joinedSessions: [], sessions: [] };
+  }
+
+  // Fetch session details from Convex
+  const sessions = await convex.query(api.sessions.getMultiple, {
+    sessionIds: allSessionIds,
+  });
+
+  return {
+    votedSessions,
+    joinedSessions,
+    sessions,
+  };
 }

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 
 // Create a new vote session
 export const create = mutation({
@@ -96,5 +97,42 @@ export const revealResults = mutation({
     });
 
     return true;
+  },
+});
+
+// Get multiple sessions by their IDs
+export const getMultiple = query({
+  args: {
+    sessionIds: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const sessions = await Promise.all(
+      args.sessionIds.map(async (id) => {
+        try {
+          const sessionId = id as Id<"sessions">;
+          const session = await ctx.db.get(sessionId);
+          if (!session) return null;
+
+          // Get participant count
+          const participants = await ctx.db
+            .query("participants")
+            .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
+            .collect();
+
+          const votedCount = participants.filter((p) => p.hasVoted).length;
+
+          return {
+            ...session,
+            _id: id,
+            participantCount: participants.length,
+            votedCount,
+          };
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    return sessions.filter((s) => s !== null);
   },
 });

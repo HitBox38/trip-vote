@@ -1,7 +1,9 @@
 import { CreateVoteForm } from "@/components/create-vote-form";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Globe } from "lucide-react";
+import { Globe, History } from "lucide-react";
 import { Metadata } from "next";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   alternates: {
@@ -39,7 +41,13 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="fixed top-4 right-4">
+        <div className="fixed top-4 right-4 flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/history">
+              <History className="h-4 w-4 mr-2" />
+              Previous Votes
+            </Link>
+          </Button>
           <ThemeToggle />
         </div>
         <div className="w-full max-w-md">
