@@ -141,16 +141,7 @@ export async function submitVotes(prevState: unknown, formData: FormData) {
 
   const { sessionId, participantId, countries } = result.data;
 
-  // Check if user has already voted on this session
   const cookieStore = await cookies();
-  const voteCookie = cookieStore.get(`voted_${sessionId}`);
-
-  if (voteCookie) {
-    return {
-      success: false,
-      errors: { countries: ["You have already submitted your vote for this session"] },
-    };
-  }
 
   try {
     await convex.mutation(api.votes.submit, {

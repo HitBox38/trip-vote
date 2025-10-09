@@ -2,17 +2,20 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Globe, Users, Clock, Loader2, CheckCircle2 } from "lucide-react";
+import { Globe, Users, Clock, Loader2, Edit, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { JoinVoteForm } from "./join-vote-form";
 import { Id } from "@/convex/_generated/dataModel";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 interface SessionInfoProps {
   sessionId: string;
   alreadyVoted?: boolean;
+  participantId?: string;
 }
 
-export function SessionInfo({ sessionId, alreadyVoted = false }: SessionInfoProps) {
+export function SessionInfo({ sessionId, alreadyVoted = false, participantId }: SessionInfoProps) {
   const session = useQuery(api.sessions.get, { sessionId: sessionId as Id<"sessions"> });
 
   if (session === undefined) {
@@ -71,15 +74,25 @@ export function SessionInfo({ sessionId, alreadyVoted = false }: SessionInfoProp
             <span className="text-sm font-bold capitalize">{session.status}</span>
           </div>
 
-          {alreadyVoted ? (
-            <div className="text-center py-6">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 mb-3">
-                <CheckCircle2 className="w-6 h-6" />
+          {alreadyVoted && participantId ? (
+            <div className="border-t pt-4 space-y-4">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 mb-3">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <p className="text-green-600 dark:text-green-400 font-semibold mb-1">
+                  Already Voted
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  You have already submitted your vote for this session
+                </p>
               </div>
-              <p className="text-green-600 dark:text-green-400 font-semibold mb-1">Already Voted</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                You have already submitted your vote for this session
-              </p>
+              <Button asChild className="w-full" variant="outline">
+                <Link href={`/vote/${sessionId}/voting?participant=${participantId}`}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Your Response
+                </Link>
+              </Button>
             </div>
           ) : !isFull ? (
             <>

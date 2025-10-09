@@ -61,10 +61,11 @@ export default async function VoteSessionPage({
   // Check if user has already voted
   const cookieStore = await cookies();
   const alreadyVoted = cookieStore.has(`voted_${id}`);
+  const participantId = cookieStore.get(`voted_${id}`)?.value;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <SessionInfo sessionId={id} alreadyVoted={alreadyVoted} />
+      <SessionInfo sessionId={id} alreadyVoted={alreadyVoted} participantId={participantId} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { submitVotes } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,14 +27,27 @@ import { useState } from "react";
 interface VotingInterfaceProps {
   sessionId: string;
   participantId: string;
-  username: string;
 }
 
-export function VotingInterface({ sessionId, participantId, username }: VotingInterfaceProps) {
-  const { selectedCountries, toggleCountry, moveUp, moveDown, removeCountry } = useVotingStore();
+export function VotingInterface({ sessionId, participantId }: VotingInterfaceProps) {
+  const { selectedCountries, toggleCountry, moveUp, moveDown, removeCountry, setCountries } =
+    useVotingStore();
   const [state, formAction, isPending] = useActionState(submitVotes, null);
   const session = useConvexQuery(api.sessions.get, { sessionId: sessionId as Id<"sessions"> });
+  const participant = useConvexQuery(api.participants.get, {
+    participantId: participantId as Id<"participants">,
+  });
+  const existingVote = useConvexQuery(api.votes.getByParticipant, {
+    participantId: participantId as Id<"participants">,
+  });
   const [open, setOpen] = useState(false);
+
+  // Pre-populate with existing vote if available
+  useEffect(() => {
+    if (existingVote?.countries && existingVote.countries.length > 0) {
+      setCountries(existingVote.countries);
+    }
+  }, [existingVote, setCountries]);
 
   const getCountryName = (code: string) => COUNTRIES.find((c) => c.code === code)?.name || code;
 
@@ -67,12 +80,17 @@ export function VotingInterface({ sessionId, participantId, username }: VotingIn
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Vote for Your Destinations
+          {existingVote ? "Edit Your Vote" : "Vote for Your Destinations"}
         </h1>
         <p className="text-gray-600 dark:text-gray-300">
-          Welcome, <span className="font-semibold">{username}</span>! Select up to 5 countries and
-          rank them.
+          Welcome, <span className="font-semibold">{participant?.username || "Voter"}</span>! Select
+          up to 5 countries and rank them.
         </p>
+        {existingVote && (
+          <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+            You&apos;re editing your previous response
+          </p>
+        )}
         {session?.originCountry && (
           <div className="text-sm text-blue-600 dark:text-blue-400 mt-2 flex flex-col items-center justify-center gap-1">
             {loadingDestinations ? (
@@ -279,7 +297,13 @@ export function VotingInterface({ sessionId, participantId, username }: VotingIn
                   type="submit"
                   className="w-full"
                   disabled={isPending || selectedCountries.length === 0}>
-                  {isPending ? "Submitting..." : "Submit Your Vote"}
+                  {isPending
+                    ? existingVote
+                      ? "Updating..."
+                      : "Submitting..."
+                    : existingVote
+                      ? "Update Your Vote"
+                      : "Submit Your Vote"}
                 </Button>
               </form>
             </CardContent>

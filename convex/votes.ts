@@ -42,6 +42,19 @@ export const submit = mutation({
   },
 });
 
+// Get a participant's vote
+export const getByParticipant = query({
+  args: { participantId: v.id("participants") },
+  handler: async (ctx, args) => {
+    const vote = await ctx.db
+      .query("votes")
+      .withIndex("by_participant", (q) => q.eq("participantId", args.participantId))
+      .first();
+
+    return vote;
+  },
+});
+
 // Get results for a session
 export const getResults = query({
   args: { sessionId: v.id("sessions") },

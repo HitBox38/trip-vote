@@ -6,6 +6,7 @@ interface VotingState {
   moveUp: (index: number) => void;
   moveDown: (index: number) => void;
   removeCountry: (countryCode: string) => void;
+  setCountries: (countries: string[]) => void;
   reset: () => void;
 }
 
@@ -47,6 +48,8 @@ export const useVotingStore = create<VotingState>((set) => ({
     set((state) => ({
       selectedCountries: state.selectedCountries.filter((c) => c !== countryCode),
     })),
+
+  setCountries: (countries) => set({ selectedCountries: countries }),
 
   reset: () => set({ selectedCountries: [] }),
 }));
