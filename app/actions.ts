@@ -105,10 +105,77 @@ export async function joinVote(prevState: unknown, formData: FormData) {
   redirect(`/vote/${sessionId}/voting?participant=${participantId}`);
 }
 
+// Schema for creator joining as participant
+const joinAsCreatorSchema = z.object({
+  username: z
+    .string()
+    .min(2, "Username must be at least 2 characters")
+    .max(20, "Username must be at most 20 characters"),
+  sessionId: z.string(),
+  creatorId: z.string(),
+});
+
+export async function joinVoteAsCreator(prevState: unknown, formData: FormData) {
+  const result = joinAsCreatorSchema.safeParse({
+    username: formData.get("username"),
+    sessionId: formData.get("sessionId"),
+    creatorId: formData.get("creatorId"),
+  });
+
+  if (!result.success) {
+    const errors: Record<string, string[]> = {};
+    result.error.issues.forEach((issue) => {
+      const field = issue.path[0]?.toString() || "form";
+      errors[field] = [...(errors[field] || []), issue.message];
+    });
+    return { success: false, errors };
+  }
+
+  const { username, sessionId, creatorId } = result.data;
+
+  let participantId: string;
+
+  try {
+    participantId = await convex.mutation(api.participants.add, {
+      sessionId: sessionId as Id<"sessions">,
+      username,
+    });
+
+    // Set cookies to track creator's participant ID
+    const cookieStore = await cookies();
+    cookieStore.set(`joined_${sessionId}`, participantId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+      path: "/",
+    });
+
+    // Also store creator relationship
+    cookieStore.set(`creator_${sessionId}`, creatorId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+      path: "/",
+    });
+  } catch (error) {
+    const err = error as Error;
+    return {
+      success: false,
+      errors: { username: [err.message || "Failed to join session"] },
+    };
+  }
+
+  // Redirect must be outside try/catch as it throws a special error
+  redirect(`/vote/${sessionId}/voting?participant=${participantId}&creator=${creatorId}`);
+}
+
 // Schema for submitting votes
 const submitVotesSchema = z.object({
   sessionId: z.string(),
   participantId: z.string(),
+  creatorId: z.string().optional(),
   countries: z
     .string()
     .transform((str) => {
@@ -127,6 +194,7 @@ export async function submitVotes(prevState: unknown, formData: FormData) {
   const result = submitVotesSchema.safeParse({
     sessionId: formData.get("sessionId"),
     participantId: formData.get("participantId"),
+    creatorId: formData.get("creatorId"),
     countries: formData.get("countries"),
   });
 
@@ -139,7 +207,7 @@ export async function submitVotes(prevState: unknown, formData: FormData) {
     return { success: false, errors };
   }
 
-  const { sessionId, participantId, countries } = result.data;
+  const { sessionId, participantId, creatorId, countries } = result.data;
 
   const cookieStore = await cookies();
 
@@ -167,7 +235,10 @@ export async function submitVotes(prevState: unknown, formData: FormData) {
   }
 
   // Redirect must be outside try/catch as it throws a special error
-  redirect(`/vote/${sessionId}/waiting?participant=${participantId}`);
+  const redirectUrl = creatorId
+    ? `/vote/${sessionId}/waiting?participant=${participantId}&creator=${creatorId}`
+    : `/vote/${sessionId}/waiting?participant=${participantId}`;
+  redirect(redirectUrl);
 }
 
 // Schema for revealing results

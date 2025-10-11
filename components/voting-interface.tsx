@@ -27,9 +27,10 @@ import { useState } from "react";
 interface VotingInterfaceProps {
   sessionId: string;
   participantId: string;
+  creatorId?: string;
 }
 
-export function VotingInterface({ sessionId, participantId }: VotingInterfaceProps) {
+export function VotingInterface({ sessionId, participantId, creatorId }: VotingInterfaceProps) {
   const { selectedCountries, toggleCountry, moveUp, moveDown, removeCountry, setCountries } =
     useVotingStore();
   const [state, formAction, isPending] = useActionState(submitVotes, null);
@@ -291,6 +292,7 @@ export function VotingInterface({ sessionId, participantId }: VotingInterfacePro
               <form action={formAction} className="mt-6">
                 <input type="hidden" name="sessionId" value={sessionId} />
                 <input type="hidden" name="participantId" value={participantId} />
+                {creatorId && <input type="hidden" name="creatorId" value={creatorId} />}
                 <input type="hidden" name="countries" value={JSON.stringify(selectedCountries)} />
 
                 <Button

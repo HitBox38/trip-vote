@@ -1,12 +1,11 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
-import { createVote } from "@/app/actions";
+import { createVote, joinVoteAsCreator } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Copy, Check, ExternalLink, MapPin } from "lucide-react";
+import { Users, Copy, Check, MapPin, User } from "lucide-react";
 import { useState } from "react";
-import Link from "next/link";
 import { COUNTRIES } from "@/lib/countries";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 const formSchema = z.object({
   maxParticipants: z
@@ -40,6 +40,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export function CreateVoteForm() {
   const [state, formAction, isPending] = useActionState(createVote, null);
+  const [joinState, joinFormAction, isJoinPending] = useActionState(joinVoteAsCreator, null);
   const [copied, setCopied] = useState(false);
 
   const form = useForm<FormValues>({
@@ -72,7 +73,6 @@ export function CreateVoteForm() {
 
   if (state?.success && state.sessionId) {
     const inviteLink = `${window.location.origin}/vote/${state.sessionId}`;
-    const creatorLink = `/vote/${state.sessionId}?creator=${state.creatorId}`;
 
     return (
       <div className="space-y-4">
@@ -96,21 +96,54 @@ export function CreateVoteForm() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <Button asChild className="w-full">
-            <Link href={creatorLink}>
-              Go to Session
-              <ExternalLink className="w-4 h-4 ml-2" />
-            </Link>
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={() => window.location.reload()}>
-            Create Another Vote
-          </Button>
+        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Join & Vote</h3>
+          <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
+            Enter your name to join the session and cast your vote:
+          </p>
+
+          <form action={joinFormAction} className="space-y-4">
+            <input type="hidden" name="sessionId" value={state.sessionId} />
+            <input type="hidden" name="creatorId" value={state.creatorId} />
+
+            <div className="space-y-2">
+              <Label htmlFor="username" className="text-sm font-medium">
+                Your Username
+              </Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  type="text"
+                  id="username"
+                  name="username"
+                  placeholder="Enter your name"
+                  required
+                  minLength={2}
+                  maxLength={20}
+                  className="pl-10"
+                  aria-describedby={joinState?.errors?.username ? "username-error" : undefined}
+                />
+              </div>
+              {joinState?.errors?.username && (
+                <p id="username-error" className="text-sm text-red-600 dark:text-red-400">
+                  {joinState.errors.username[0]}
+                </p>
+              )}
+            </div>
+
+            <Button type="submit" className="w-full" disabled={isJoinPending}>
+              {isJoinPending ? "Joining..." : "Join & Start Voting"}
+            </Button>
+          </form>
         </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={() => window.location.reload()}>
+          Create Another Vote
+        </Button>
       </div>
     );
   }

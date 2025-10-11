@@ -32,10 +32,10 @@ export default async function VotingPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ participant?: string }>;
+  searchParams: Promise<{ participant?: string; creator?: string }>;
 }) {
   const { id } = await params;
-  const { participant } = await searchParams;
+  const { participant, creator } = await searchParams;
 
   if (!participant) {
     redirect(`/vote/${id}`);
@@ -43,7 +43,7 @@ export default async function VotingPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
-      <VotingInterface sessionId={id} participantId={participant} />
+      <VotingInterface sessionId={id} participantId={participant} creatorId={creator} />
     </div>
   );
 }
