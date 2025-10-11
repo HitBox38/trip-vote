@@ -63,3 +63,43 @@ export const markVoted = mutation({
     await ctx.db.patch(args.participantId, { hasVoted: true });
   },
 });
+
+// Remove a participant from session (creator only)
+export const remove = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    participantId: v.id("participants"),
+    creatorId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Verify session and creator
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) {
+      throw new Error("Session not found");
+    }
+    if (session.creatorId !== args.creatorId) {
+      throw new Error("Only the creator can remove participants");
+    }
+
+    // Verify participant exists and belongs to session
+    const participant = await ctx.db.get(args.participantId);
+    if (!participant || participant.sessionId !== args.sessionId) {
+      throw new Error("Participant not found in this session");
+    }
+
+    // Delete participant's vote if exists
+    const vote = await ctx.db
+      .query("votes")
+      .withIndex("by_participant", (q) => q.eq("participantId", args.participantId))
+      .first();
+
+    if (vote) {
+      await ctx.db.delete(vote._id);
+    }
+
+    // Delete participant
+    await ctx.db.delete(args.participantId);
+
+    return true;
+  },
+});

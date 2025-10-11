@@ -281,6 +281,90 @@ export async function revealResults(prevState: unknown, formData: FormData) {
   redirect(`/vote/${sessionId}/waiting?creator=${creatorId}`);
 }
 
+// Schema for resetting a participant's vote
+const resetVoteSchema = z.object({
+  sessionId: z.string(),
+  participantId: z.string(),
+  creatorId: z.string(),
+});
+
+export async function resetParticipantVote(prevState: unknown, formData: FormData) {
+  const result = resetVoteSchema.safeParse({
+    sessionId: formData.get("sessionId"),
+    participantId: formData.get("participantId"),
+    creatorId: formData.get("creatorId"),
+  });
+
+  if (!result.success) {
+    const errors: Record<string, string[]> = {};
+    result.error.issues.forEach((issue) => {
+      const field = issue.path[0]?.toString() || "form";
+      errors[field] = [...(errors[field] || []), issue.message];
+    });
+    return { success: false, errors };
+  }
+
+  const { sessionId, participantId, creatorId } = result.data;
+
+  try {
+    await convex.mutation(api.votes.resetVote, {
+      sessionId: sessionId as Id<"sessions">,
+      participantId: participantId as Id<"participants">,
+      creatorId,
+    });
+  } catch (error) {
+    const err = error as Error;
+    return {
+      success: false,
+      errors: { form: [err.message || "Failed to reset vote"] },
+    };
+  }
+
+  return { success: true };
+}
+
+// Schema for removing a participant
+const removeParticipantSchema = z.object({
+  sessionId: z.string(),
+  participantId: z.string(),
+  creatorId: z.string(),
+});
+
+export async function removeParticipant(prevState: unknown, formData: FormData) {
+  const result = removeParticipantSchema.safeParse({
+    sessionId: formData.get("sessionId"),
+    participantId: formData.get("participantId"),
+    creatorId: formData.get("creatorId"),
+  });
+
+  if (!result.success) {
+    const errors: Record<string, string[]> = {};
+    result.error.issues.forEach((issue) => {
+      const field = issue.path[0]?.toString() || "form";
+      errors[field] = [...(errors[field] || []), issue.message];
+    });
+    return { success: false, errors };
+  }
+
+  const { sessionId, participantId, creatorId } = result.data;
+
+  try {
+    await convex.mutation(api.participants.remove, {
+      sessionId: sessionId as Id<"sessions">,
+      participantId: participantId as Id<"participants">,
+      creatorId,
+    });
+  } catch (error) {
+    const err = error as Error;
+    return {
+      success: false,
+      errors: { form: [err.message || "Failed to remove participant"] },
+    };
+  }
+
+  return { success: true };
+}
+
 // Get user's previous votes from cookies
 export async function getPreviousVotes() {
   const cookieStore = await cookies();

@@ -6,10 +6,29 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, CheckCircle, Circle, Users, Loader2, Eye, Copy, Check, Link2 } from "lucide-react";
+import {
+  Clock,
+  CheckCircle,
+  Circle,
+  Users,
+  Loader2,
+  Eye,
+  Copy,
+  Check,
+  Link2,
+  MoreVertical,
+  RotateCcw,
+  UserX,
+} from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 import { useActionState } from "react";
-import { revealResults } from "@/app/actions";
+import { revealResults, resetParticipantVote, removeParticipant } from "@/app/actions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface WaitingRoomProps {
   sessionId: string;
@@ -18,11 +37,112 @@ interface WaitingRoomProps {
   creatorId?: string;
 }
 
+interface ParticipantItemProps {
+  participant: {
+    _id: Id<"participants">;
+    username: string;
+    hasVoted: boolean;
+  };
+  sessionId: string;
+  creatorId?: string;
+  isCreator: boolean;
+  managingParticipant: string | null;
+  setManagingParticipant: (id: string | null) => void;
+}
+
+function ParticipantItem({
+  participant,
+  sessionId,
+  creatorId,
+  isCreator,
+  managingParticipant,
+  setManagingParticipant,
+}: ParticipantItemProps) {
+  const [, resetAction, isResetting] = useActionState(resetParticipantVote, null);
+  const [, removeAction, isRemoving] = useActionState(removeParticipant, null);
+  const isManaging = managingParticipant === participant._id.toString();
+
+  const handleResetVote = () => {
+    setManagingParticipant(participant._id.toString());
+    const formData = new FormData();
+    formData.append("sessionId", sessionId);
+    formData.append("participantId", participant._id.toString());
+    formData.append("creatorId", creatorId || "");
+    resetAction(formData);
+  };
+
+  const handleRemoveParticipant = () => {
+    if (
+      !confirm(
+        `Are you sure you want to remove ${participant.username}? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setManagingParticipant(participant._id.toString());
+    const formData = new FormData();
+    formData.append("sessionId", sessionId);
+    formData.append("participantId", participant._id.toString());
+    formData.append("creatorId", creatorId || "");
+    removeAction(formData);
+  };
+
+  return (
+    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+      {participant.hasVoted ? (
+        <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0" />
+      ) : (
+        <Circle className="w-5 h-5 text-gray-400 shrink-0" />
+      )}
+      <span className="flex-1 font-medium text-sm">{participant.username}</span>
+      <span
+        className={`text-xs font-semibold ${
+          participant.hasVoted ? "text-green-600 dark:text-green-400" : "text-gray-400"
+        }`}>
+        {participant.hasVoted ? "Voted" : "Waiting"}
+      </span>
+      {isCreator && creatorId && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              disabled={isManaging && (isResetting || isRemoving)}>
+              {isManaging && (isResetting || isRemoving) ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <MoreVertical className="w-4 h-4" />
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {participant.hasVoted && (
+              <DropdownMenuItem onClick={handleResetVote} disabled={isResetting}>
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Reset Vote
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              onClick={handleRemoveParticipant}
+              disabled={isRemoving}
+              className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400">
+              <UserX className="w-4 h-4 mr-2" />
+              Remove Participant
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
+  );
+}
+
 export function WaitingRoom({ sessionId, isCreator, username, creatorId }: WaitingRoomProps) {
   const session = useQuery(api.sessions.get, { sessionId: sessionId as Id<"sessions"> });
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(revealResults, null);
   const [copied, setCopied] = useState(false);
+  const [managingParticipant, setManagingParticipant] = useState<string | null>(null);
 
   const inviteUrl =
     typeof window !== "undefined" ? `${window.location.origin}/vote/${sessionId}` : "";
@@ -121,22 +241,15 @@ export function WaitingRoom({ sessionId, isCreator, username, creatorId }: Waiti
           {/* Participants list */}
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {session.participants.map((participant) => (
-              <div
+              <ParticipantItem
                 key={participant._id.toString()}
-                className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                {participant.hasVoted ? (
-                  <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
-                ) : (
-                  <Circle className="w-5 h-5 text-gray-400" />
-                )}
-                <span className="flex-1 font-medium text-sm">{participant.username}</span>
-                <span
-                  className={`text-xs font-semibold ${
-                    participant.hasVoted ? "text-green-600 dark:text-green-400" : "text-gray-400"
-                  }`}>
-                  {participant.hasVoted ? "Voted" : "Waiting"}
-                </span>
-              </div>
+                participant={participant}
+                sessionId={sessionId}
+                creatorId={creatorId}
+                isCreator={isCreator}
+                managingParticipant={managingParticipant}
+                setManagingParticipant={setManagingParticipant}
+              />
             ))}
           </div>
 

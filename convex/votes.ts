@@ -55,6 +55,40 @@ export const getByParticipant = query({
   },
 });
 
+// Reset a participant's vote (creator only)
+export const resetVote = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    participantId: v.id("participants"),
+    creatorId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Verify session and creator
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) {
+      throw new Error("Session not found");
+    }
+    if (session.creatorId !== args.creatorId) {
+      throw new Error("Only the creator can reset votes");
+    }
+
+    // Find and delete the vote
+    const vote = await ctx.db
+      .query("votes")
+      .withIndex("by_participant", (q) => q.eq("participantId", args.participantId))
+      .first();
+
+    if (vote) {
+      await ctx.db.delete(vote._id);
+    }
+
+    // Mark participant as not voted
+    await ctx.db.patch(args.participantId, { hasVoted: false });
+
+    return true;
+  },
+});
+
 // Get results for a session
 export const getResults = query({
   args: { sessionId: v.id("sessions") },
