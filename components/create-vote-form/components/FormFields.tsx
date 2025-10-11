@@ -20,7 +20,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Users, MapPin, ChevronsUpDown, Check } from "lucide-react";
+import { Users, MapPin, ChevronsUpDown, Check, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FormValues } from "../types";
 
@@ -41,6 +41,26 @@ export function FormFields({ control, isPending }: Prop) {
 
   return (
     <>
+      <FormField
+        control={control}
+        name="creatorName"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Your Name (Optional)</FormLabel>
+            <FormControl>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" />
+                <Input type="text" placeholder="Enter your name" className="pl-10" {...field} />
+              </div>
+            </FormControl>
+            <FormDescription>
+              If provided, you&apos;ll skip the name entry step when voting
+            </FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
       <FormField
         control={control}
         name="maxParticipants"

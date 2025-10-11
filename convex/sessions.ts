@@ -6,12 +6,14 @@ import { Id } from "./_generated/dataModel";
 export const create = mutation({
   args: {
     creatorId: v.string(),
+    creatorName: v.optional(v.string()),
     maxParticipants: v.number(),
     originCountry: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const sessionId = await ctx.db.insert("sessions", {
       creatorId: args.creatorId,
+      creatorName: args.creatorName,
       maxParticipants: args.maxParticipants,
       status: "waiting",
       createdAt: Date.now(),

@@ -9,15 +9,21 @@ import { formSchema, FormValues } from "./types";
 import { SuccessState } from "./components/SuccessState";
 import { FormFields } from "./components/FormFields";
 
+interface Prop {
+  /** Default name from saved cookie */
+  defaultName?: string;
+}
+
 /**
  * Form component for creating a new voting session
  */
-export function CreateVoteForm() {
+export function CreateVoteForm({ defaultName = "" }: Prop) {
   const [state, formAction, isPending] = useActionState(createVote, null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      creatorName: defaultName,
       maxParticipants: 5,
       originCountry: "",
     },
@@ -27,7 +33,7 @@ export function CreateVoteForm() {
   useEffect(() => {
     if (state?.errors) {
       Object.entries(state.errors).forEach(([field, messages]) => {
-        if (field === "maxParticipants" || field === "originCountry") {
+        if (field === "creatorName" || field === "maxParticipants" || field === "originCountry") {
           form.setError(field, { message: messages[0] });
         }
       });

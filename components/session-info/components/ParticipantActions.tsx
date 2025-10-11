@@ -14,6 +14,8 @@ interface Prop {
   isValidParticipant: boolean;
   /** Whether session is full */
   isFull: boolean;
+  /** Optional default name from saved cookie */
+  defaultName?: string;
 }
 
 /**
@@ -23,6 +25,7 @@ interface Prop {
  * @param alreadyVoted - Whether participant has already voted
  * @param isValidParticipant - Whether participant exists
  * @param isFull - Whether session is full
+ * @param defaultName - Optional default name from saved cookie
  */
 export function ParticipantActions({
   sessionId,
@@ -30,6 +33,7 @@ export function ParticipantActions({
   alreadyVoted,
   isValidParticipant,
   isFull,
+  defaultName = "",
 }: Prop) {
   if (alreadyVoted && isValidParticipant && participantId) {
     return (
@@ -75,7 +79,7 @@ export function ParticipantActions({
     return (
       <div className="border-t pt-4">
         <h3 className="text-sm font-semibold mb-3">Join the Vote</h3>
-        <JoinVoteForm sessionId={sessionId} />
+        <JoinVoteForm sessionId={sessionId} defaultName={defaultName} />
       </div>
     );
   }

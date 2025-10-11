@@ -6,4 +6,6 @@ export interface Prop {
   sessionId: string;
   /** Optional participant ID if user has already joined */
   participantId?: string;
+  /** Optional default name from saved cookie */
+  defaultName?: string;
 }

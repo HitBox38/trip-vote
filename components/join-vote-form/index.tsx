@@ -11,8 +11,9 @@ import { Prop } from "./types";
 /**
  * Form component for joining an existing vote session
  * @param sessionId - The unique identifier for the voting session to join
+ * @param defaultName - Default name from saved cookie
  */
-export function JoinVoteForm({ sessionId }: Prop) {
+export function JoinVoteForm({ sessionId, defaultName = "" }: Prop) {
   const [state, formAction, isPending] = useActionState(joinVote, null);
 
   return (
@@ -30,6 +31,7 @@ export function JoinVoteForm({ sessionId }: Prop) {
             id="username"
             name="username"
             placeholder="Enter your name"
+            defaultValue={defaultName}
             required
             minLength={2}
             maxLength={20}

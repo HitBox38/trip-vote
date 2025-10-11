@@ -4,6 +4,7 @@ import { v } from "convex/values";
 export default defineSchema({
   sessions: defineTable({
     creatorId: v.string(),
+    creatorName: v.optional(v.string()), // Optional name for the creator
     maxParticipants: v.number(),
     status: v.union(v.literal("waiting"), v.literal("voting"), v.literal("completed")),
     createdAt: v.number(),

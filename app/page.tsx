@@ -4,6 +4,7 @@ import { Globe, History } from "lucide-react";
 import { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { getSavedUsername } from "@/app/actions";
 
 export const metadata: Metadata = {
   alternates: {
@@ -11,7 +12,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Home() {
+export default async function Home() {
+  const savedUsername = await getSavedUsername();
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -65,7 +67,7 @@ export default function Home() {
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               Create a Vote
             </h2>
-            <CreateVoteForm />
+            <CreateVoteForm defaultName={savedUsername} />
           </div>
         </div>
       </div>

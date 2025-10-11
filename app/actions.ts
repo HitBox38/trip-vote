@@ -12,6 +12,12 @@ const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 // Schema for creating a vote session
 const createVoteSchema = z.object({
+  creatorName: z
+    .string()
+    .min(2, "Name must be at least 2 characters")
+    .max(20, "Name must be at most 20 characters")
+    .optional()
+    .or(z.literal("")),
   maxParticipants: z.coerce
     .number()
     .min(2, "At least 2 participants required")
@@ -21,7 +27,9 @@ const createVoteSchema = z.object({
 
 export async function createVote(prevState: unknown, formData: FormData) {
   const originCountry = formData.get("originCountry");
+  const creatorName = formData.get("creatorName");
   const result = createVoteSchema.safeParse({
+    creatorName: creatorName === "" ? undefined : creatorName,
     maxParticipants: formData.get("maxParticipants"),
     originCountry: originCountry === "" ? undefined : originCountry,
   });
@@ -39,14 +47,56 @@ export async function createVote(prevState: unknown, formData: FormData) {
 
   const sessionId = await convex.mutation(api.sessions.create, {
     creatorId,
+    creatorName: result.data.creatorName,
     maxParticipants: result.data.maxParticipants,
     originCountry: result.data.originCountry,
   });
+
+  const cookieStore = await cookies();
+
+  // Save creator name to cookie for future use
+  if (result.data.creatorName) {
+    cookieStore.set("saved_username", result.data.creatorName, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 365, // 1 year
+      path: "/",
+    });
+
+    // Auto-join creator as participant
+    const participantId = await convex.mutation(api.participants.add, {
+      sessionId: sessionId as Id<"sessions">,
+      username: result.data.creatorName,
+    });
+
+    // Save participant ID in cookies
+    cookieStore.set(`joined_${sessionId}`, participantId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+      path: "/",
+    });
+
+    // Store creator relationship
+    cookieStore.set(`creator_${sessionId}`, creatorId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+      path: "/",
+    });
+
+    // Redirect to waiting page with both creator and participant IDs
+    redirect(`/vote/${sessionId}/waiting?creator=${creatorId}&participant=${participantId}`);
+  }
 
   return {
     success: true,
     sessionId: sessionId as string,
     creatorId,
+    creatorName: result.data.creatorName,
   };
 }
 
@@ -91,6 +141,15 @@ export async function joinVote(prevState: unknown, formData: FormData) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 30, // 30 days
+      path: "/",
+    });
+
+    // Save username to cookie for future use
+    cookieStore.set("saved_username", username, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 365, // 1 year
       path: "/",
     });
   } catch (error) {
@@ -157,6 +216,15 @@ export async function joinVoteAsCreator(prevState: unknown, formData: FormData) 
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 30, // 30 days
+      path: "/",
+    });
+
+    // Save username to cookie for future use
+    cookieStore.set("saved_username", username, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 365, // 1 year
       path: "/",
     });
   } catch (error) {
@@ -368,6 +436,13 @@ export async function removeParticipant(prevState: unknown, formData: FormData) 
   }
 
   return { success: true };
+}
+
+// Get saved username from cookies
+export async function getSavedUsername() {
+  const cookieStore = await cookies();
+  const savedUsername = cookieStore.get("saved_username")?.value;
+  return savedUsername || "";
 }
 
 // Get user's previous votes from cookies

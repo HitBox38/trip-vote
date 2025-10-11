@@ -17,8 +17,9 @@ import { ResultsCards } from "./components/ResultsCards";
  * @param isCreator - Whether the current user is the session creator
  * @param username - The username of the current user
  * @param creatorId - Optional creator ID
+ * @param participantId - Optional participant ID if creator joined
  */
-export function LiveResults({ sessionId, isCreator, username, creatorId }: Prop) {
+export function LiveResults({ sessionId, isCreator, username, creatorId, participantId }: Prop) {
   const session = useQuery(api.sessions.get, { sessionId: sessionId as Id<"sessions"> });
   const results = useQuery(api.votes.getResults, { sessionId: sessionId as Id<"sessions"> });
   const router = useRouter();
@@ -80,6 +81,7 @@ export function LiveResults({ sessionId, isCreator, username, creatorId }: Prop)
         isCompleted={isCompleted}
         managingParticipant={managingParticipant}
         setManagingParticipant={setManagingParticipant}
+        participantId={participantId}
       />
 
       {hasResults && (

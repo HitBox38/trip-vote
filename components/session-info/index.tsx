@@ -14,8 +14,9 @@ import { ParticipantActions } from "./components/ParticipantActions";
  * Component that displays session information and handles joining/voting
  * @param sessionId - The unique identifier for the voting session
  * @param participantId - Optional participant ID if user has already joined
+ * @param defaultName - Optional default name from saved cookie
  */
-export function SessionInfo({ sessionId, participantId }: Prop) {
+export function SessionInfo({ sessionId, participantId, defaultName = "" }: Prop) {
   const session = useQuery(api.sessions.get, { sessionId: sessionId as Id<"sessions"> });
   const participant = useQuery(
     api.participants.getStatus,
@@ -66,6 +67,7 @@ export function SessionInfo({ sessionId, participantId }: Prop) {
             alreadyVoted={alreadyVoted}
             isValidParticipant={isValidParticipant}
             isFull={isFull}
+            defaultName={defaultName}
           />
         </CardContent>
       </Card>

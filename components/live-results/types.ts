@@ -12,6 +12,8 @@ export interface Prop {
   username: string;
   /** Optional creator ID */
   creatorId?: string;
+  /** Optional participant ID if creator joined */
+  participantId?: string;
 }
 
 /**
