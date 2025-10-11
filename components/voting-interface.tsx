@@ -5,7 +5,7 @@ import { submitVotes } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { COUNTRIES } from "@/lib/countries";
-import { MapPin, ArrowUp, ArrowDown, Trash2, Loader2 } from "lucide-react";
+import { MapPin, Trash2, Loader2, GripVertical } from "lucide-react";
 import { useVotingStore } from "@/lib/voting-store";
 import { WorldMap } from "@/components/world-map";
 import { useQuery as useConvexQuery } from "convex/react";
@@ -19,6 +19,24 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 
 interface VotingInterfaceProps {
   sessionId: string;
@@ -26,9 +44,54 @@ interface VotingInterfaceProps {
   creatorId?: string;
 }
 
+interface SortableItemProps {
+  id: string;
+  index: number;
+  countryName: string;
+  onRemove: () => void;
+}
+
+function SortableItem({ id, index, countryName, onRemove }: SortableItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-2 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg touch-none">
+      <button
+        type="button"
+        className="cursor-grab active:cursor-grabbing touch-none flex items-center justify-center w-8 h-8 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+        {...attributes}
+        {...listeners}>
+        <GripVertical className="w-5 h-5" />
+      </button>
+      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-sm">
+        {index + 1}
+      </div>
+      <span className="flex-1 font-medium text-sm">{countryName}</span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={onRemove}
+        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
+        <Trash2 className="w-4 h-4" />
+      </Button>
+    </div>
+  );
+}
+
 export function VotingInterface({ sessionId, participantId, creatorId }: VotingInterfaceProps) {
-  const { selectedCountries, toggleCountry, moveUp, moveDown, removeCountry, setCountries } =
-    useVotingStore();
+  const { selectedCountries, toggleCountry, removeCountry, setCountries } = useVotingStore();
   const [state, formAction, isPending] = useActionState(submitVotes, null);
   const [isDesktop, setIsDesktop] = useState(true);
   const session = useConvexQuery(api.sessions.get, { sessionId: sessionId as Id<"sessions"> });
@@ -38,6 +101,31 @@ export function VotingInterface({ sessionId, participantId, creatorId }: VotingI
   const existingVote = useConvexQuery(api.votes.getByParticipant, {
     participantId: participantId as Id<"participants">,
   });
+
+  // Setup drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px movement required before drag starts
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end event
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = selectedCountries.indexOf(active.id as string);
+      const newIndex = selectedCountries.indexOf(over.id as string);
+
+      const newOrder = arrayMove(selectedCountries, oldIndex, newIndex);
+      setCountries(newOrder);
+    }
+  };
 
   // Detect desktop vs mobile
   useEffect(() => {
@@ -254,48 +342,27 @@ export function VotingInterface({ sessionId, participantId, creatorId }: VotingI
                     <p>Select countries to start ranking</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    {selectedCountries.map((countryCode, index) => (
-                      <div
-                        key={countryCode}
-                        className="flex items-center gap-2 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-sm">
-                          {index + 1}
-                        </div>
-                        <span className="flex-1 font-medium text-sm">
-                          {getCountryName(countryCode)}
-                        </span>
-                        <div className="flex gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => moveUp(index)}
-                            disabled={index === 0}
-                            className="h-8 w-8 p-0">
-                            <ArrowUp className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => moveDown(index)}
-                            disabled={index === selectedCountries.length - 1}
-                            className="h-8 w-8 p-0">
-                            <ArrowDown className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeCountry(countryCode)}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                    modifiers={[restrictToVerticalAxis]}>
+                    <SortableContext
+                      items={selectedCountries}
+                      strategy={verticalListSortingStrategy}>
+                      <div className="space-y-2">
+                        {selectedCountries.map((countryCode, index) => (
+                          <SortableItem
+                            key={countryCode}
+                            id={countryCode}
+                            index={index}
+                            countryName={getCountryName(countryCode)}
+                            onRemove={() => removeCountry(countryCode)}
+                          />
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </SortableContext>
+                  </DndContext>
                 )}
 
                 {state?.errors?.countries && (
