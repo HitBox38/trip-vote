@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { submitVotes } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,12 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import MultipleSelector, { Option } from "@/components/ui/multiselect";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface VotingInterfaceProps {
   sessionId: string;
@@ -24,6 +30,7 @@ export function VotingInterface({ sessionId, participantId, creatorId }: VotingI
   const { selectedCountries, toggleCountry, moveUp, moveDown, removeCountry, setCountries } =
     useVotingStore();
   const [state, formAction, isPending] = useActionState(submitVotes, null);
+  const [isDesktop, setIsDesktop] = useState(true);
   const session = useConvexQuery(api.sessions.get, { sessionId: sessionId as Id<"sessions"> });
   const participant = useConvexQuery(api.participants.get, {
     participantId: participantId as Id<"participants">,
@@ -32,12 +39,44 @@ export function VotingInterface({ sessionId, participantId, creatorId }: VotingI
     participantId: participantId as Id<"participants">,
   });
 
+  // Detect desktop vs mobile
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 768px)");
+    setIsDesktop(mediaQuery.matches);
+
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mediaQuery.addEventListener("change", handler);
+    return () => mediaQuery.removeEventListener("change", handler);
+  }, []);
+
   // Pre-populate with existing vote if available
   useEffect(() => {
     if (existingVote?.countries && existingVote.countries.length > 0) {
       setCountries(existingVote.countries);
     }
   }, [existingVote, setCountries]);
+
+  // Calculate default open accordion items
+  const defaultOpenItems = useMemo(() => {
+    const items: string[] = [];
+
+    // Search & Select: closed on desktop, open on mobile
+    if (!isDesktop) {
+      items.push("search");
+    }
+
+    // Map: open on desktop, closed on mobile
+    if (isDesktop) {
+      items.push("map");
+    }
+
+    // Rank: open if there are votes, closed if empty
+    if (selectedCountries.length > 0) {
+      items.push("rank");
+    }
+
+    return items;
+  }, [isDesktop, selectedCountries.length]);
 
   const getCountryName = (code: string) => COUNTRIES.find((c) => c.code === code)?.name || code;
 
@@ -136,137 +175,159 @@ export function VotingInterface({ sessionId, participantId, creatorId }: VotingI
         )}
       </div>
 
-      <div className="space-y-6">
+      <Accordion type="multiple" defaultValue={defaultOpenItems} className="space-y-6">
         {/* Country Search Combobox - Mobile Friendly */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Search & Select Countries</CardTitle>
-            <CardDescription>
-              Search and select destinations ({selectedCountries.length}/5 selected)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <MultipleSelector
-              value={selectedOptions}
-              onChange={handleSelectionChange}
-              options={countryOptions}
-              placeholder="Search countries..."
-              emptyIndicator={
-                <p className="text-center text-sm text-muted-foreground">No country found.</p>
-              }
-              maxSelected={5}
-              onMaxSelected={(count) => {
-                console.log(`Maximum ${count} countries already selected`);
-              }}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Interactive World Map */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Select Countries on Map</CardTitle>
-            <CardDescription>
-              Click on up to 5 countries ({selectedCountries.length}/5 selected)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <WorldMap
-              selectedCountries={selectedCountries}
-              onCountryClick={toggleCountry}
-              canSelect={selectedCountries.length < 5}
-              eligibleCountries={eligibleCountries}
-            />
-          </CardContent>
-        </Card>
-
-        <div className="grid md:grid-cols-1 gap-6">
-          {/* Ranking */}
+        <AccordionItem value="search" className="border-none">
           <Card>
             <CardHeader>
-              <CardTitle>Rank Your Choices</CardTitle>
-              <CardDescription>Drag to reorder from most to least preferred</CardDescription>
+              <AccordionTrigger className="hover:no-underline">
+                <div className="flex flex-col items-start gap-1">
+                  <CardTitle>Search & Select Countries</CardTitle>
+                  <CardDescription>
+                    Search and select destinations ({selectedCountries.length}/5 selected)
+                  </CardDescription>
+                </div>
+              </AccordionTrigger>
             </CardHeader>
-            <CardContent>
-              {selectedCountries.length === 0 ? (
-                <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                  <MapPin className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>Select countries to start ranking</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {selectedCountries.map((countryCode, index) => (
-                    <div
-                      key={countryCode}
-                      className="flex items-center gap-2 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-sm">
-                        {index + 1}
-                      </div>
-                      <span className="flex-1 font-medium text-sm">
-                        {getCountryName(countryCode)}
-                      </span>
-                      <div className="flex gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => moveUp(index)}
-                          disabled={index === 0}
-                          className="h-8 w-8 p-0">
-                          <ArrowUp className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => moveDown(index)}
-                          disabled={index === selectedCountries.length - 1}
-                          className="h-8 w-8 p-0">
-                          <ArrowDown className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeCountry(countryCode)}
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {state?.errors?.countries && (
-                <p className="text-sm text-red-600 dark:text-red-400 mt-2">
-                  {state.errors.countries[0]}
-                </p>
-              )}
-
-              <form action={formAction} className="mt-6">
-                <input type="hidden" name="sessionId" value={sessionId} />
-                <input type="hidden" name="participantId" value={participantId} />
-                {creatorId && <input type="hidden" name="creatorId" value={creatorId} />}
-                <input type="hidden" name="countries" value={JSON.stringify(selectedCountries)} />
-
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isPending || selectedCountries.length === 0}>
-                  {isPending
-                    ? existingVote
-                      ? "Updating..."
-                      : "Submitting..."
-                    : existingVote
-                      ? "Update Your Vote"
-                      : "Submit Your Vote"}
-                </Button>
-              </form>
-            </CardContent>
+            <AccordionContent>
+              <CardContent>
+                <MultipleSelector
+                  value={selectedOptions}
+                  onChange={handleSelectionChange}
+                  options={countryOptions}
+                  placeholder="Search countries..."
+                  emptyIndicator={
+                    <p className="text-center text-sm text-muted-foreground">No country found.</p>
+                  }
+                  maxSelected={5}
+                  onMaxSelected={(count) => {
+                    console.log(`Maximum ${count} countries already selected`);
+                  }}
+                />
+              </CardContent>
+            </AccordionContent>
           </Card>
-        </div>
-      </div>
+        </AccordionItem>
+
+        {/* Interactive World Map */}
+        <AccordionItem value="map" className="border-none">
+          <Card>
+            <CardHeader>
+              <AccordionTrigger className="hover:no-underline">
+                <div className="flex flex-col items-start gap-1">
+                  <CardTitle>Select Countries on Map</CardTitle>
+                  <CardDescription>
+                    Click on up to 5 countries ({selectedCountries.length}/5 selected)
+                  </CardDescription>
+                </div>
+              </AccordionTrigger>
+            </CardHeader>
+            <AccordionContent>
+              <CardContent>
+                <WorldMap
+                  selectedCountries={selectedCountries}
+                  onCountryClick={toggleCountry}
+                  canSelect={selectedCountries.length < 5}
+                  eligibleCountries={eligibleCountries}
+                />
+              </CardContent>
+            </AccordionContent>
+          </Card>
+        </AccordionItem>
+
+        {/* Ranking */}
+        <AccordionItem value="rank" className="border-none">
+          <Card>
+            <CardHeader>
+              <AccordionTrigger className="hover:no-underline">
+                <div className="flex flex-col items-start gap-1">
+                  <CardTitle>Rank Your Choices</CardTitle>
+                  <CardDescription>Drag to reorder from most to least preferred</CardDescription>
+                </div>
+              </AccordionTrigger>
+            </CardHeader>
+            <AccordionContent>
+              <CardContent>
+                {selectedCountries.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                    <MapPin className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>Select countries to start ranking</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {selectedCountries.map((countryCode, index) => (
+                      <div
+                        key={countryCode}
+                        className="flex items-center gap-2 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-sm">
+                          {index + 1}
+                        </div>
+                        <span className="flex-1 font-medium text-sm">
+                          {getCountryName(countryCode)}
+                        </span>
+                        <div className="flex gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => moveUp(index)}
+                            disabled={index === 0}
+                            className="h-8 w-8 p-0">
+                            <ArrowUp className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => moveDown(index)}
+                            disabled={index === selectedCountries.length - 1}
+                            className="h-8 w-8 p-0">
+                            <ArrowDown className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeCountry(countryCode)}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {state?.errors?.countries && (
+                  <p className="text-sm text-red-600 dark:text-red-400 mt-2">
+                    {state.errors.countries[0]}
+                  </p>
+                )}
+
+                <form action={formAction} className="mt-6">
+                  <input type="hidden" name="sessionId" value={sessionId} />
+                  <input type="hidden" name="participantId" value={participantId} />
+                  {creatorId && <input type="hidden" name="creatorId" value={creatorId} />}
+                  <input type="hidden" name="countries" value={JSON.stringify(selectedCountries)} />
+
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={isPending || selectedCountries.length === 0}>
+                    {isPending
+                      ? existingVote
+                        ? "Updating..."
+                        : "Submitting..."
+                      : existingVote
+                        ? "Update Your Vote"
+                        : "Submit Your Vote"}
+                  </Button>
+                </form>
+              </CardContent>
+            </AccordionContent>
+          </Card>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }
