@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitVotes } from "@/app/actions";
 import { Button } from "@/components/ui/button";
@@ -96,6 +96,8 @@ export function VotingInterface({ sessionId, participantId, creatorId }: VotingI
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(submitVotes, null);
   const [isDesktop, setIsDesktop] = useState(true);
+  const [openItems, setOpenItems] = useState<string[]>([]);
+  const prevCountriesLengthRef = useRef(0);
   const session = useConvexQuery(api.sessions.get, { sessionId: sessionId as Id<"sessions"> });
   const participant = useConvexQuery(api.participants.get, {
     participantId: participantId as Id<"participants">,
@@ -155,8 +157,8 @@ export function VotingInterface({ sessionId, participantId, creatorId }: VotingI
     }
   }, [existingVote, setCountries]);
 
-  // Calculate default open accordion items
-  const defaultOpenItems = useMemo(() => {
+  // Initialize accordion open items based on desktop/mobile (only once)
+  useEffect(() => {
     const items: string[] = [];
 
     // Search & Select: closed on desktop, open on mobile
@@ -174,8 +176,23 @@ export function VotingInterface({ sessionId, participantId, creatorId }: VotingI
       items.push("rank");
     }
 
-    return items;
-  }, [isDesktop, selectedCountries.length]);
+    setOpenItems(items);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Open rank accordion when transitioning from 0 to 1+ countries
+  useEffect(() => {
+    const prevLength = prevCountriesLengthRef.current;
+    const currentLength = selectedCountries.length;
+
+    // Only auto-open when transitioning from 0 to 1+ countries
+    if (prevLength === 0 && currentLength > 0 && !openItems.includes("rank")) {
+      setOpenItems((prev) => [...prev, "rank"]);
+    }
+
+    // Update ref for next render
+    prevCountriesLengthRef.current = currentLength;
+  }, [selectedCountries.length, openItems]);
 
   const getCountryName = (code: string) => COUNTRIES.find((c) => c.code === code)?.name || code;
 
@@ -274,7 +291,11 @@ export function VotingInterface({ sessionId, participantId, creatorId }: VotingI
         )}
       </div>
 
-      <Accordion type="multiple" defaultValue={defaultOpenItems} className="space-y-6">
+      <Accordion
+        type="multiple"
+        value={openItems}
+        onValueChange={setOpenItems}
+        className="space-y-6">
         {/* Country Search Combobox - Mobile Friendly */}
         <AccordionItem value="search" className="border-none">
           <Card>
