@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { submitVotes } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,6 +93,7 @@ function SortableItem({ id, index, countryName, onRemove }: SortableItemProps) {
 
 export function VotingInterface({ sessionId, participantId, creatorId }: VotingInterfaceProps) {
   const { selectedCountries, toggleCountry, removeCountry, setCountries } = useVotingStore();
+  const router = useRouter();
   const [state, formAction, isPending] = useActionState(submitVotes, null);
   const [isDesktop, setIsDesktop] = useState(true);
   const session = useConvexQuery(api.sessions.get, { sessionId: sessionId as Id<"sessions"> });
@@ -101,6 +103,15 @@ export function VotingInterface({ sessionId, participantId, creatorId }: VotingI
   const existingVote = useConvexQuery(api.votes.getByParticipant, {
     participantId: participantId as Id<"participants">,
   });
+
+  // Handle successful submission
+  useEffect(() => {
+    if (state && "success" in state && state.success === true) {
+      if ("redirectUrl" in state && typeof state.redirectUrl === "string") {
+        router.push(state.redirectUrl);
+      }
+    }
+  }, [state, router]);
 
   // Setup drag and drop sensors
   const sensors = useSensors(

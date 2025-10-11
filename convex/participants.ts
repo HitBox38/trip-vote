@@ -103,3 +103,18 @@ export const remove = mutation({
     return true;
   },
 });
+
+// Get participant status by ID (used to verify cookie validity)
+export const getStatus = query({
+  args: { participantId: v.id("participants") },
+  handler: async (ctx, args) => {
+    const participant = await ctx.db.get(args.participantId);
+    if (!participant) return null;
+
+    return {
+      _id: participant._id,
+      sessionId: participant.sessionId,
+      hasVoted: participant.hasVoted,
+    };
+  },
+});

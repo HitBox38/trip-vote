@@ -11,14 +11,19 @@ import Link from "next/link";
 
 interface SessionInfoProps {
   sessionId: string;
-  alreadyVoted?: boolean;
   participantId?: string;
 }
 
-export function SessionInfo({ sessionId, alreadyVoted = false, participantId }: SessionInfoProps) {
+export function SessionInfo({ sessionId, participantId }: SessionInfoProps) {
   const session = useQuery(api.sessions.get, { sessionId: sessionId as Id<"sessions"> });
 
-  if (session === undefined) {
+  // Verify participant's actual status from the database
+  const participant = useQuery(
+    api.participants.getStatus,
+    participantId ? { participantId: participantId as Id<"participants"> } : "skip"
+  );
+
+  if (session === undefined || (participantId && participant === undefined)) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
@@ -39,6 +44,10 @@ export function SessionInfo({ sessionId, alreadyVoted = false, participantId }: 
 
   const availableSlots = session.maxParticipants - session.participants.length;
   const isFull = availableSlots <= 0;
+
+  // Use database status, not cookie status
+  const alreadyVoted = participant?.hasVoted ?? false;
+  const isValidParticipant = participant !== null && participant !== undefined;
 
   return (
     <div className="w-full max-w-md">
@@ -74,7 +83,7 @@ export function SessionInfo({ sessionId, alreadyVoted = false, participantId }: 
             <span className="text-sm font-bold capitalize">{session.status}</span>
           </div>
 
-          {alreadyVoted && participantId ? (
+          {alreadyVoted && isValidParticipant && participantId ? (
             <div className="border-t pt-4 space-y-4">
               <div className="text-center">
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 mb-3">
@@ -91,6 +100,20 @@ export function SessionInfo({ sessionId, alreadyVoted = false, participantId }: 
                 <Link href={`/vote/${sessionId}/voting?participant=${participantId}`}>
                   <Edit className="w-4 h-4 mr-2" />
                   Edit Your Response
+                </Link>
+              </Button>
+            </div>
+          ) : isValidParticipant && participantId ? (
+            <div className="border-t pt-4 space-y-4">
+              <div className="text-center">
+                <p className="text-blue-600 dark:text-blue-400 font-semibold mb-1">Ready to Vote</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  You&apos;re already joined. Let&apos;s submit your vote!
+                </p>
+              </div>
+              <Button asChild className="w-full">
+                <Link href={`/vote/${sessionId}/voting?participant=${participantId}`}>
+                  Submit Your Vote
                 </Link>
               </Button>
             </div>

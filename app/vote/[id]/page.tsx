@@ -58,14 +58,15 @@ export default async function VoteSessionPage({
     redirect(`/vote/${id}/waiting?creator=${creator}`);
   }
 
-  // Check if user has already voted
+  // Check if user has cookies for this session
   const cookieStore = await cookies();
-  const alreadyVoted = cookieStore.has(`voted_${id}`);
-  const participantId = cookieStore.get(`voted_${id}`)?.value;
+  const votedParticipantId = cookieStore.get(`voted_${id}`)?.value;
+  const joinedParticipantId = cookieStore.get(`joined_${id}`)?.value;
+  const participantId = votedParticipantId || joinedParticipantId;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <SessionInfo sessionId={id} alreadyVoted={alreadyVoted} participantId={participantId} />
+      <SessionInfo sessionId={id} participantId={participantId} />
     </div>
   );
 }

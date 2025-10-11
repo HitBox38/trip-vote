@@ -175,7 +175,11 @@ export async function joinVoteAsCreator(prevState: unknown, formData: FormData) 
 const submitVotesSchema = z.object({
   sessionId: z.string(),
   participantId: z.string(),
-  creatorId: z.string().optional(),
+  creatorId: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => val || undefined),
   countries: z
     .string()
     .transform((str) => {
@@ -234,11 +238,12 @@ export async function submitVotes(prevState: unknown, formData: FormData) {
     };
   }
 
-  // Redirect must be outside try/catch as it throws a special error
+  // Return success with redirect URL for client-side navigation
   const redirectUrl = creatorId
     ? `/vote/${sessionId}/waiting?participant=${participantId}&creator=${creatorId}`
     : `/vote/${sessionId}/waiting?participant=${participantId}`;
-  redirect(redirectUrl);
+
+  return { success: true, redirectUrl };
 }
 
 // Schema for revealing results
@@ -380,31 +385,86 @@ export async function getPreviousVotes() {
       votedSessions.push({ sessionId, participantId: cookie.value });
     } else if (cookie.name.startsWith("joined_")) {
       const sessionId = cookie.name.replace("joined_", "");
-      // Only include if user didn't vote (no voted_ cookie for this session)
-      if (!allCookies.some((c) => c.name === `voted_${sessionId}`)) {
-        joinedSessions.push({ sessionId, participantId: cookie.value });
-      }
+      joinedSessions.push({ sessionId, participantId: cookie.value });
     }
   });
 
   // Get all unique session IDs
-  const allSessionIds = [
-    ...votedSessions.map((s) => s.sessionId),
-    ...joinedSessions.map((s) => s.sessionId),
-  ];
+  const allSessionIds = Array.from(
+    new Set([...votedSessions.map((s) => s.sessionId), ...joinedSessions.map((s) => s.sessionId)])
+  );
 
   if (allSessionIds.length === 0) {
     return { votedSessions: [], joinedSessions: [], sessions: [] };
   }
 
+  // Verify participant status for each voted session
+  // Check if votes were reset by comparing cookie status with database status
+  const verifiedVotedSessions: { sessionId: string; participantId: string }[] = [];
+  const actualJoinedSessions: { sessionId: string; participantId: string }[] = [];
+
+  for (const { sessionId, participantId } of votedSessions) {
+    try {
+      const participant = await convex.query(api.participants.getStatus, {
+        participantId: participantId as Id<"participants">,
+      });
+
+      if (participant && participant.hasVoted) {
+        // Vote is still valid
+        verifiedVotedSessions.push({ sessionId, participantId });
+      } else if (participant && !participant.hasVoted) {
+        // Vote was reset - show as joined only
+        actualJoinedSessions.push({ sessionId, participantId });
+      }
+      // If participant is null (removed), we just skip it
+    } catch {
+      // Error checking participant - skip it
+    }
+  }
+
+  // Check joined sessions
+  for (const { sessionId, participantId } of joinedSessions) {
+    // Skip if already processed as voted
+    if (verifiedVotedSessions.some((v) => v.sessionId === sessionId)) {
+      continue;
+    }
+    // Skip if already in actualJoinedSessions from reset votes
+    if (actualJoinedSessions.some((v) => v.sessionId === sessionId)) {
+      continue;
+    }
+
+    try {
+      const participant = await convex.query(api.participants.getStatus, {
+        participantId: participantId as Id<"participants">,
+      });
+
+      if (participant) {
+        actualJoinedSessions.push({ sessionId, participantId });
+      }
+      // If participant is null (removed), we just skip it
+    } catch {
+      // Error checking participant - skip it
+    }
+  }
+
   // Fetch session details from Convex
-  const sessions = await convex.query(api.sessions.getMultiple, {
-    sessionIds: allSessionIds,
-  });
+  const validSessionIds = Array.from(
+    new Set([
+      ...verifiedVotedSessions.map((s) => s.sessionId),
+      ...actualJoinedSessions.map((s) => s.sessionId),
+    ])
+  );
+
+  const sessions =
+    validSessionIds.length > 0
+      ? await convex.query(api.sessions.getMultiple, {
+          sessionIds: validSessionIds,
+        })
+      : [];
 
   return {
-    votedSessions,
-    joinedSessions,
+    votedSessions: verifiedVotedSessions,
+    joinedSessions: actualJoinedSessions,
     sessions,
   };
 }
