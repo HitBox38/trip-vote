@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -36,6 +36,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Progress } from "./ui/progress";
 
 interface LiveResultsProps {
   sessionId: string;
@@ -77,7 +78,9 @@ function ParticipantItem({
     formData.append("sessionId", sessionId);
     formData.append("participantId", participant._id.toString());
     formData.append("creatorId", creatorId || "");
-    resetAction(formData);
+    startTransition(() => {
+      resetAction(formData);
+    });
   };
 
   const handleRemoveParticipant = () => {
@@ -93,7 +96,9 @@ function ParticipantItem({
     formData.append("sessionId", sessionId);
     formData.append("participantId", participant._id.toString());
     formData.append("creatorId", creatorId || "");
-    removeAction(formData);
+    startTransition(() => {
+      removeAction(formData);
+    });
   };
 
   return (
@@ -249,11 +254,6 @@ export function LiveResults({ sessionId, isCreator, username, creatorId }: LiveR
               {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
             </Button>
           </div>
-          {copied && (
-            <p className="text-xs text-green-600 dark:text-green-400 font-medium">
-              Link copied to clipboard!
-            </p>
-          )}
         </CardContent>
       </Card>
 
@@ -262,17 +262,12 @@ export function LiveResults({ sessionId, isCreator, username, creatorId }: LiveR
         <CardHeader>
           <CardTitle>Vote Progress</CardTitle>
           <CardDescription>
-            {votedCount} of {totalCount} participants have voted (max: {maxParticipants})
+            {votedCount} of {maxParticipants} participants have voted
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Progress bar */}
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
-            <div
-              className="bg-blue-600 h-full transition-all duration-500 ease-out"
-              style={{ width: `${totalCount > 0 ? (votedCount / totalCount) * 100 : 0}%` }}
-            />
-          </div>
+          <Progress value={(votedCount / maxParticipants) * 100} />
 
           {/* Participants list */}
           <div className="space-y-2 max-h-64 overflow-y-auto">
