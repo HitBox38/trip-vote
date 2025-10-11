@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { User } from "lucide-react";
+import { Prop } from "./types";
 
-interface JoinVoteFormProps {
-  sessionId: string;
-}
-
-export function JoinVoteForm({ sessionId }: JoinVoteFormProps) {
+/**
+ * Form component for joining an existing vote session
+ * @param sessionId - The unique identifier for the voting session to join
+ */
+export function JoinVoteForm({ sessionId }: Prop) {
   const [state, formAction, isPending] = useActionState(joinVote, null);
 
   return (
