@@ -1,11 +1,10 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { createVote, joinVoteAsCreator } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Copy, Check, MapPin, User } from "lucide-react";
-import { useState } from "react";
+import { Users, Copy, Check, MapPin, User, ChevronsUpDown } from "lucide-react";
 import { COUNTRIES } from "@/lib/countries";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,14 +18,17 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   maxParticipants: z
@@ -42,6 +44,7 @@ export function CreateVoteForm() {
   const [state, formAction, isPending] = useActionState(createVote, null);
   const [joinState, joinFormAction, isJoinPending] = useActionState(joinVoteAsCreator, null);
   const [copied, setCopied] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -179,43 +182,85 @@ export function CreateVoteForm() {
         <FormField
           control={form.control}
           name="originCountry"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Country of Origin (Optional)</FormLabel>
-              <>
-                <Select
-                  onValueChange={(value) => {
-                    field.onChange(value === "none" ? "" : value);
-                  }}
-                  defaultValue={field.value || "none"}>
-                  <FormControl>
-                    <SelectTrigger className="w-full">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-gray-400" />
-                        <SelectValue placeholder="No restriction - All countries available" />
-                      </div>
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="none">No restriction - All countries available</SelectItem>
-                    {[...COUNTRIES]
-                      .sort((a, b) => a.name.localeCompare(b.name))
-                      .map((country) => (
-                        <SelectItem key={country.code} value={country.code}>
-                          {country.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+          render={({ field }) => {
+            const sortedCountries = [...COUNTRIES].sort((a, b) => a.name.localeCompare(b.name));
+            const selectedCountry = sortedCountries.find((c) => c.code === field.value);
+
+            return (
+              <FormItem className="flex flex-col">
+                <FormLabel>Country of Origin (Optional)</FormLabel>
+                <Popover open={open} onOpenChange={setOpen}>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={open}
+                        className={cn(
+                          "w-full justify-between font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-gray-400" />
+                          <span>
+                            {selectedCountry?.name || "No restriction - All countries available"}
+                          </span>
+                        </div>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search country..." />
+                      <CommandList>
+                        <CommandEmpty>No country found.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            value="none"
+                            onSelect={() => {
+                              field.onChange("");
+                              setOpen(false);
+                            }}>
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                !field.value ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            No restriction - All countries available
+                          </CommandItem>
+                          {sortedCountries.map((country) => (
+                            <CommandItem
+                              key={country.code}
+                              value={country.name}
+                              onSelect={() => {
+                                field.onChange(country.code);
+                                setOpen(false);
+                              }}>
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  field.value === country.code ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {country.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
                 <input type="hidden" name="originCountry" value={field.value || ""} />
-              </>
-              <FormDescription>
-                If set, voters can only select countries accessible with this passport (visa-free,
-                visa-on-arrival, or e-visa)
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
+                <FormDescription>
+                  If set, voters can only select countries accessible with this passport (visa-free,
+                  visa-on-arrival, or e-visa)
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            );
+          }}
         />
 
         <Button type="submit" className="w-full" disabled={isPending}>
