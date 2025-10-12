@@ -56,10 +56,15 @@ export function useSubmissionRedirect(state: unknown) {
 
 /**
  * Hook for detecting desktop vs mobile
+ * Checks immediately on client to prevent layout flashing
  * @returns Boolean indicating if device is desktop
  */
 export function useDesktopDetection() {
-  const [isDesktop, setIsDesktop] = useState(true);
+  const [isDesktop, setIsDesktop] = useState(() => {
+    // Check immediately on client, default to false during SSR
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(min-width: 768px)").matches;
+  });
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(min-width: 768px)");
