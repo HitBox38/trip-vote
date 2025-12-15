@@ -46,7 +46,7 @@ A collaborative voting application to help groups decide their next travel desti
 1. Clone the repository:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/HitBox38/trip-vote
 cd trip-vote
 ```
 
